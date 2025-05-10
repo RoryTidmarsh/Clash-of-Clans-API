@@ -9,13 +9,14 @@ keys = {"rory": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDA
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
+clan_name = "Pussay Palace"
 base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
     "authorization": "Bearer %s" % keys["rory"],
 }
-
+debug_print_statements = False
 # Make the request to the API
 # response = requests.request("GET", url, headers=headers)
 # data = response.json()
@@ -90,3 +91,66 @@ newdata.to_csv(save_filepath, index=False)
 # Print the DataFrame
 print("Battle tag DataFrame:")
 print(newdata)
+
+
+## Objective of the next part of the code:
+# Load each war in the league and filter for those containing the clan tag
+# Then save new data to csv file for each war with the relevant clan tag
+
+
+def Pussay_in_war(battle_tag):
+    """Check if the clan is in the war.
+
+    Args:
+        battleday_tags (string): battle tag for the war
+
+    Returns:
+        bool: True if the clan is in the war, False otherwise
+    """
+    war_link = f"https://api.clashofclans.com/v1/clanwarleagues/wars/%23{battle_tag[1:]}"
+    # war_response = requests.get(f"{base_url}/clans/{clan_tag}/currentwar", headers=headers)
+    war_response = requests.get(war_link, headers=headers)
+
+    war_data = war_response.json() # Keys ['state', 'teamSize', 'preparationStartTime', 'startTime', 'endTime', 'clan', 'opponent', 'warStartTime']
+    # "clan" and "opponent" are dictionaries containing the fighting clan's data, these have keys:
+    # ['tag', 'name', 'badgeUrls', 'clanLevel', 'attacks', 'stars', 'destructionPercentage', 'members']
+    
+    if war_data["clan"]["name"] == clan_name or war_data["opponent"]["name"] == clan_name:
+        if debug_print_statements:
+            print(f"Clan is in war {battle_tag}")   
+            print("Clan name: ", war_data["clan"]["name"])
+            print("Opponent name: ", war_data["opponent"]["name"])
+        return True
+    
+    else:
+        if debug_print_statements:
+            print(f"Clan is not in war {battle_tag}")  
+        return False
+    
+# Find which wars the clan is in
+reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
+# Loop through the days
+for day, battle_day_tags in enumerate(cwl_war_tags):
+    battleday_tags = battle_day_tags["warTags"]
+
+    # Loop through the battle tags for each day
+    for battle_tag in battleday_tags:
+        # Check if the clan is in the war
+        in_war = Pussay_in_war(battle_tag)
+        # If the clan is in the war, add the battle tag to the DataFrame
+        if in_war:
+            reduced_warTag_df.loc[len(reduced_warTag_df)] = [day+1, battle_tag, season]
+            if debug_print_statements:
+                print("Added to reduced DataFrame: ", battle_tag)
+
+# Save the reduced battle tag DataFrame to a CSV file
+save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
+if os.path.exists(save_filepath):
+    existing_pussay_data = pd.read_csv(save_filepath)
+else:
+    existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])
+new_pussay_data = append_days_to_dataframe(existing_data, season)
+new_pussay_data.to_csv(save_filepath, index=False)
+
+print("Reduced battle tag DataFrame:")
+print(new_pussay_data)
