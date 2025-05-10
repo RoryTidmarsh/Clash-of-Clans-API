@@ -53,11 +53,12 @@ for i,battleday_tags in enumerate(cwl_war_tags):
     battleday_tags = battleday_tags["warTags"]
     battle_tag_df.loc[i] = [i+1, battleday_tags[0], battleday_tags[1], battleday_tags[2], battleday_tags[3], season]
 
-def append_days_to_dataframe(existing_data, season):
+def append_days_to_dataframe(existing_data, new_df, season):
     """Append new battleday data to the existing DataFrame for the current season.
 
     Args:
         existing_data (pd.DataFrame): existing DataFrame containing battle tags from previous seasons and the current season (if any)
+        new_df (pd.DataFrame): DataFrame containing new battle tags for the current season
         season (str): string of the season to append data for
 
     Returns:
@@ -74,25 +75,25 @@ def append_days_to_dataframe(existing_data, season):
         print("Max battleday for current season:", max_battleday)
 
         # Append data for the current season over the max battleday
-        append_data = battle_tag_df[(battle_tag_df["season"] == season) & (battle_tag_df["battleday"] > max_battleday)]
+        append_data = new_df[(new_df["season"] == season) & (new_df["battleday"] > max_battleday)]
         newdata = pd.concat([existing_data, append_data], ignore_index=True)
     else:
         print(f"Season {season} is not in the DataFrame.")
-        newdata = pd.concat([existing_data, battle_tag_df], ignore_index=True)
+        newdata = pd.concat([existing_data, new_df], ignore_index=True)
     
     return newdata
 
 # Save the battle tag DataFrame to a CSV file
 save_filepath = os.path.join(os.path.dirname(__file__), "battle_tags.csv")
 existing_data = pd.read_csv(save_filepath)
-newdata = append_days_to_dataframe(existing_data, season)
+newdata = append_days_to_dataframe(existing_data,battle_tag_df, season)
 newdata.to_csv(save_filepath, index=False)
 
 # Print the DataFrame
 print("Battle tag DataFrame:")
 print(newdata)
 
-
+############################################################################################
 ## Objective of the next part of the code:
 # Load each war in the league and filter for those containing the clan tag
 # Then save new data to csv file for each war with the relevant clan tag
@@ -145,11 +146,16 @@ for day, battle_day_tags in enumerate(cwl_war_tags):
 
 # Save the reduced battle tag DataFrame to a CSV file
 save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
+
+# Check if the file already exists
 if os.path.exists(save_filepath):
-    existing_pussay_data = pd.read_csv(save_filepath)
+    existing_pussay_data = pd.read_csv(save_filepath) # If it exists, load the existing data and append the new data
 else:
-    existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])
-new_pussay_data = append_days_to_dataframe(existing_data, season)
+    existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])# Else, create a new DataFrame
+
+# Append the new data to the existing data
+new_pussay_data = append_days_to_dataframe(existing_pussay_data, reduced_warTag_df, season)
+# Save the new data to the CSV file
 new_pussay_data.to_csv(save_filepath, index=False)
 
 print("Reduced battle tag DataFrame:")
