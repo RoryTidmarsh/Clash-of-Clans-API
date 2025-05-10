@@ -17,31 +17,31 @@ headers = {
 }
 
 # Make the request to the API
-response = requests.request("GET", url, headers=headers)
-data = response.json()
-print(data.keys())
+# response = requests.request("GET", url, headers=headers)
+# data = response.json()
+# print(data.keys())
 # Find rozzledog72 in the member list and print their tag and role
-for member in data["memberList"]:
-    if member["name"] == "rozzledog 72":
-        print("Name:", member["name"])
-        print("Role:", member["role"])
-        print("Trophies:", member["trophies"])
-        print("TH level:",member["townHallLevel"])
+# for member in data["memberList"]:
+#     if member["name"] == "rozzledog 72":
+#         print("Name:", member["name"])
+#         print("Role:", member["role"])
+#         print("Trophies:", member["trophies"])
+#         print("TH level:",member["townHallLevel"])
 
 
 # Accessing clan war log
-response_warlog = requests.request("GET", url + "/warlog", headers=headers)
-data_warlog = response_warlog.json()
-print("War log keys: ", data_warlog["items"][0].keys()) # Keys: ['result', 'endTime', 'teamSize', 'attacksPerMember', 'battleModifier', 'clan', 'opponent']
+# response_warlog = requests.request("GET", url + "/warlog", headers=headers)
+# data_warlog = response_warlog.json()
+# print("War log keys: ", data_warlog["items"][0].keys()) # Keys: ['result', 'endTime', 'teamSize', 'attacksPerMember', 'battleModifier', 'clan', 'opponent']
 
 
 # Accessing CWL information
 leaguegroup_url = f"{base_url}/clans/{clan_tag}/currentwar/leaguegroup"
 leaguegroup_response = requests.get(leaguegroup_url, headers=headers)
 leaguegroup_data = leaguegroup_response.json()  # Keys: ['state', 'season', 'clans', 'rounds'])
-print("League group keys: ", leaguegroup_data.keys())
+# print("League group keys: ", leaguegroup_data.keys())
 season = leaguegroup_data["season"]
-print("League Other Clan members: ", leaguegroup_data["clans"][0].keys()) # Index for other clans in league group
+# print("League Other Clan members: ", leaguegroup_data["clans"][0].keys()) # Index for other clans in league group
 
 # Create a DataFrame to store battle tags in
 battle_tag_df = pd.DataFrame(columns=["battleday", "wartag1", "wartag2", "wartag3", "wartag4", "season"])
@@ -50,19 +50,43 @@ battle_tag_df = pd.DataFrame(columns=["battleday", "wartag1", "wartag2", "wartag
 cwl_war_tags = leaguegroup_data["rounds"]
 for i,battleday_tags in enumerate(cwl_war_tags):
     battleday_tags = battleday_tags["warTags"]
-    # print(f"Battleday {i+1} tags:", battleday_tags)
-
     battle_tag_df.loc[i] = [i+1, battleday_tags[0], battleday_tags[1], battleday_tags[2], battleday_tags[3], season]
-    # for j, war_tag in enumerate(battleday_tags):
 
-    #     war_url = f"{base_url}/clans/{clan_tag}/currentwar/leaguegroup/{war_tag}"
-    #     war_response = requests.get(war_url, headers=headers)   # Get the war data for each war tag, can take a while to load
-    #     war_data = war_response.json()
-    #     print(f"War {j+1} keys: ", war_data.keys())
+def append_days_to_dataframe(existing_data, season):
+    """Append new battleday data to the existing DataFrame for the current season.
 
-# Print the battle tag DataFrame
-print(battle_tag_df)
+    Args:
+        existing_data (pd.DataFrame): existing DataFrame containing battle tags from previous seasons and the current season (if any)
+        season (str): string of the season to append data for
+
+    Returns:
+        pd.DataFrame: DataFrame with the new battleday data appended
+    """
+    # Check if the current season is already in the DataFrame
+    if season in existing_data["season"].values:
+        print(f"Season {season} is already in the DataFrame.")
+        # Filter the existing data for the current season
+        filt = existing_data["season"] == season
+
+        # Find the largest battleday for the current season
+        max_battleday = existing_data[filt]["battleday"].max()
+        print("Max battleday for current season:", max_battleday)
+
+        # Append data for the current season over the max battleday
+        append_data = battle_tag_df[(battle_tag_df["season"] == season) & (battle_tag_df["battleday"] > max_battleday)]
+        newdata = pd.concat([existing_data, append_data], ignore_index=True)
+    else:
+        print(f"Season {season} is not in the DataFrame.")
+        newdata = pd.concat([existing_data, battle_tag_df], ignore_index=True)
+    
+    return newdata
 
 # Save the battle tag DataFrame to a CSV file
 save_filepath = os.path.join(os.path.dirname(__file__), "battle_tags.csv")
-battle_tag_df.to_csv(save_filepath, index=False)
+existing_data = pd.read_csv(save_filepath)
+newdata = append_days_to_dataframe(existing_data, season)
+newdata.to_csv(save_filepath, index=False)
+
+# Print the DataFrame
+print("Battle tag DataFrame:")
+print(newdata)
