@@ -117,18 +117,31 @@ def get_war_stats(battle_tag):
         Pussay_members_df.loc[len(Pussay_members_df)] = member_battleday_stats
     return Pussay_members_df
 
-# Creating a dataframe to store the battle day stats
-base_df = pd.DataFrame(columns=["name", "townHallLevel", "attackStars", "attackPercentage", "attackDuration", "defenseStars", "defensePercentage", "defenseDuration", "opponentTHLevel", "battleday", "season"])
+def gather_season_data(season):
+    # Creating a dataframe to store the battle day stats
+    base_df = pd.DataFrame(columns=["name", "townHallLevel", "attackStars", "attackPercentage", "attackDuration", "defenseStars", "defensePercentage", "defenseDuration", "opponentTHLevel", "battleday", "season"])
 
-# Loop through all the battle tags and get the stats for each day
-for i,battle_tag in enumerate(Pussay_wars_df["wartag"]):
-    battle_day = i + 1
-    season = Pussay_wars_df["season"][i]
+    season_wars_df = Pussay_wars_df[Pussay_wars_df["season"] == season]
     
-    battle_day_df = get_war_stats(battle_tag)
-    battle_day_df["battleday"] = battle_day
-    battle_day_df["season"] = season
-    
-    # Add the battle day and season to the dataframe
-    for _, row in battle_day_df.iterrows():
-        base_df.loc[len(base_df)] = row
+    # Loop through all the battle tags and get the stats for each day
+    for i in range(len(season_wars_df)):
+        battle_tag = season_wars_df["wartag"][i]
+        battle_day = season_wars_df["battleday"][i]
+        
+        battle_day_df = get_war_stats(battle_tag)
+        battle_day_df["battleday"] = battle_day
+        battle_day_df["season"] = season
+        
+        # Add the battle day and season to the dataframe
+        for _, row in battle_day_df.iterrows():
+            base_df.loc[len(base_df)] = row
+
+    return base_df
+
+# Load the season data
+season_data = gather_season_data("2025-05")
+print(season_data.info())
+
+# Save the season data to a CSV file
+save_filepath = os.path.join(os.path.dirname(__file__), f"Pussay_season_data_{season_data['season'][0]}.csv")
+season_data.to_csv(save_filepath, index=False)
