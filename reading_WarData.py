@@ -118,6 +118,14 @@ def get_war_stats(battle_tag):
     return Pussay_members_df
 
 def gather_season_data(season):
+    """This function retrieves the war stats for a given season from the Clash of Clans API for the 'Pussay Palace' clan.
+
+    Args:
+        season (string): The season to retrieve stats for.
+
+    Returns:
+        base_df (pd.DataFrame): A DataFrame containing the war stats for each member for each battle day of the 'Pussay Palace' clan for the given season.
+    """
     # Creating a dataframe to store the battle day stats
     base_df = pd.DataFrame(columns=["name", "townHallLevel", "attackStars", "attackPercentage", "attackDuration", "defenseStars", "defensePercentage", "defenseDuration", "opponentTHLevel", "battleday", "season"])
 
@@ -143,5 +151,5 @@ season_data = gather_season_data("2025-05")
 print(season_data.info())
 
 # Save the season data to a CSV file
-save_filepath = os.path.join(os.path.dirname(__file__), f"Pussay_season_data_{season_data['season'][0]}.csv")
+save_filepath = os.path.join(os.path.dirname(__file__), f"Seasons Data\\Pussay_season_data_{season_data['season'][0]}.csv")
 season_data.to_csv(save_filepath, index=False)
