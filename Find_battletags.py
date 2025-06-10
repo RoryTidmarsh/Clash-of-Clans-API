@@ -39,6 +39,7 @@ debug_print_statements = False
 # Accessing CWL information
 leaguegroup_url = f"{base_url}/clans/{clan_tag}/currentwar/leaguegroup"
 leaguegroup_response = requests.get(leaguegroup_url, headers=headers)
+print("League group response status code:", leaguegroup_response.status_code)
 leaguegroup_data = leaguegroup_response.json()  # Keys: ['state', 'season', 'clans', 'rounds'])
 # print("League group keys: ", leaguegroup_data.keys())
 season = leaguegroup_data["season"]

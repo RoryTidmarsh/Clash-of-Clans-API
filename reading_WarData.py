@@ -150,6 +150,27 @@ def gather_season_data(season):
 season_data = gather_season_data("2025-05")
 print(season_data.info())
 
+# Path to the combined database CSV
+db_filepath = os.path.join(os.path.dirname(__file__), "Seasons Data", "Pussay_season_database.csv")
+
+# Load existing database if it exists
+if os.path.exists(db_filepath):
+    all_seasons_df = pd.read_csv(db_filepath)
+else:
+    all_seasons_df = pd.DataFrame(columns=season_data.columns)
+
+# Check if this season is already present and complete
+season_rows = all_seasons_df[all_seasons_df["season"] == season_data["season"][0]]
+if len(season_rows) < 15 * 7:
+    # Remove any partial/incomplete data for this season
+    all_seasons_df = all_seasons_df[all_seasons_df["season"] != season_data["season"][0]]
+    # Append the new season data
+    all_seasons_df = pd.concat([all_seasons_df, season_data], ignore_index=True)
+    # Save the updated database
+    all_seasons_df.to_csv(db_filepath, index=False)
+    print(f"Added/updated season {season_data['season'][0]} to database.")
+else:
+    print(f"Season {season_data['season'][0]} already complete in database.")
 # Save the season data to a CSV file
 save_filepath = os.path.join(os.path.dirname(__file__), f"Seasons Data\\Pussay_season_data_{season_data['season'][0]}.csv")
 season_data.to_csv(save_filepath, index=False)
