@@ -2,10 +2,15 @@ import pandas as pd
 import numpy as np
 import requests
 import os
+import json
 
 # Dictionary containing the API key, add your own key for your IP address
 # You can get your own key from https://developer.clashofclans.com
-keys = {"rory": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6ImZmNThkODRjLTVmYWItNDc3Ny1iY2M0LTA5OTc3ZGRjYWM4ZSIsImlhdCI6MTczODU4NzUyOSwic3ViIjoiZGV2ZWxvcGVyLzM3MjExZmI5LTgzODMtNDA1OS05MDFlLTFlNmFmZDBmYzFkNCIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjgyLjQ3LjMzLjE2MyJdLCJ0eXBlIjoiY2xpZW50In1dfQ.QOKe0Vjh2nVam7H8KM3feYh0c8sPQcR_gLRDhUWjCBYjKUgFBxTrgOaWb3BvzKx-X3Ae0OrrcEk6II7y_JmZGw"}
+# Load API keys from a JSON file
+
+keys_file_path = os.path.join(os.path.dirname(__file__), "keys.json")
+with open(keys_file_path, "r") as keys_file:
+    keys = json.load(keys_file)
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
@@ -14,7 +19,7 @@ base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
-    "authorization": "Bearer %s" % keys["rory"],
+    "authorization": "Bearer %s" % keys["rory_desktop"],
 }
 debug_print_statements = False
 # Make the request to the API
@@ -44,6 +49,7 @@ leaguegroup_data = leaguegroup_response.json()  # Keys: ['state', 'season', 'cla
 # print("League group keys: ", leaguegroup_data.keys())
 season = leaguegroup_data["season"]
 # print("League Other Clan members: ", leaguegroup_data["clans"][0].keys()) # Index for other clans in league group
+# print(leaguegroup_data)
 
 # Create a DataFrame to store battle tags in
 battle_tag_df = pd.DataFrame(columns=["battleday", "wartag1", "wartag2", "wartag3", "wartag4", "season"])
