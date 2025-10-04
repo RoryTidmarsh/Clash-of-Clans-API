@@ -43,6 +43,7 @@ def get_war_stats(battle_tag):
 
     # Make the request to the API
     war_response = requests.get(war_link, headers=headers)
+    print(battle_tag, war_response)
     war_data = war_response.json()
     if debug_print_statements: 
         print("War response code: ", war_response, "\nPussay war data keys: ", war_data.keys())
