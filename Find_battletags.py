@@ -19,7 +19,7 @@ base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
-    "authorization": "Bearer %s" % keys["rory_laptop"],
+    "authorization": "Bearer %s" % keys["rory_home"],
 }
 debug_print_statements = False
 # Make the request to the API
@@ -100,25 +100,73 @@ def append_days_to_dataframe(existing_data, new_df, season):
     Returns:
         pd.DataFrame: DataFrame with the new battleday data appended
     """
+    # Check that there is only 1 season in the new_df
+    
+    if len(new_df["season"].unique()) != 1:
+        raise ValueError(f'More than 1 season in the new data, new_df.unique = {new_df["season"].unique()}')
+    else:
+        season = new_df["season"].unique()[0]
     # Check if the current season is already in the DataFrame
-    if season in existing_data["season"].values:
+    if season in new_df["season"].values:
         print(f"Season {season} is already in the DataFrame.")
 
-        # Filter the existing data for the current season
-        filt = existing_data["season"] == season
+        
+
+        # Column headers
+        existing_col_headings = existing_data.columns.values
+        new_col_headings = existing_data.columns.values
+        assert np.array_equal(existing_col_headings, new_col_headings), \
+            f"Column headers don't match!\nExisting: {existing_col_headings}\nNew: {new_col_headings}"
+        
+        # Use bitwise & instead of 'and', and check all varying columns for "#0"
+        varying_cols_existing = existing_col_headings[1:-1]  # All columns except battleday and season
+        varying_cols_new = new_col_headings[1:-1]
+
+        # Create filter for current season
+        season_filt_existing = existing_data["season"] == season
+        season_filt_new = new_df["season"] == season
+
+        # Create filter to exclude rows with "#0" in any of the varying columns
+        no_zero_filt_existing = ~existing_data[varying_cols_existing].isin(["#0"]).any(axis=1)
+        no_zero_filt_new = ~new_df[varying_cols_new].isin(["#0"]).any(axis=1)
+
+        # Combine filters
+        filt_existing = season_filt_existing & no_zero_filt_existing
+        filt_new = season_filt_new & no_zero_filt_new
 
         # Find the largest battleday for the current season
-        max_battleday = existing_data[filt]["battleday"].max()
-        print("Max battleday for current season:", max_battleday)
+        max_battleday_exisiting = existing_data[filt_existing]["battleday"].max()
+        max_battleday_new = new_df[filt_new]["battleday"].max()
 
-        # Append data for the current season over the max battleday
-        append_data = new_df[(new_df["season"] == season) & (new_df["battleday"] > max_battleday)]
-        newdata = pd.concat([existing_data, append_data], ignore_index=True)
+        print("Max battleday from new data:", max_battleday_new)
+        print("Max battleday from exisiting data:", max_battleday_exisiting)
+
+        if max_battleday_new != max_battleday_exisiting:
+            updated_df = existing_data.copy()
+
+            update_filt = (updated_df["battleday"] > max_battleday_exisiting) & (updated_df["season"]==season)
+            new_filt = (updated_df["battleday"] > max_battleday_exisiting) & (updated_df["season"]==season)
+            
+            # Get the varying columns (everything except battleday and season)
+            varying_cols = new_col_headings[1:-1]
+            
+            # Replace the varying columns with new data
+            updated_df.loc[update_filt, varying_cols] = new_df.loc[new_filt, varying_cols].values
+            
+            print(f"Updated {update_filt.sum()} rows for battledays > {max_battleday_exisiting}")
+            
+        else:
+            print("No new battledays to update")
+            updated_df = existing_data.copy()
+            
+        # # Append data for the current season over the max battleday
+        # append_data = new_df[(new_df["season"] == season) & (new_df["battleday"] > max_battleday_exisiting)]
+        # newdata = pd.concat([existing_data, append_data], ignore_index=True)
     else:
         print(f"Season {season} is not in the DataFrame.")
-        newdata = pd.concat([existing_data, new_df], ignore_index=True)
+        updated_df = pd.concat([existing_data, new_df], ignore_index=True)
     
-    return newdata
+    return updated_df
 
 ############################################################################################
 ## Objective of the next part of the code:
@@ -138,6 +186,11 @@ def Pussay_in_war(battle_tag):
     war_link = f"https://api.clashofclans.com/v1/clanwarleagues/wars/%23{battle_tag[1:]}"
     # war_response = requests.get(f"{base_url}/clans/{clan_tag}/currentwar", headers=headers)
     war_response = requests.get(war_link, headers=headers)
+
+    # Print response code and meaning
+    if war_response.status_code != 200:
+        print("Error: ", response_codes[war_response.status_code])
+        exit()
 
     war_data = war_response.json() # Keys ['state', 'teamSize', 'preparationStartTime', 'startTime', 'endTime', 'clan', 'opponent', 'warStartTime']
     # "clan" and "opponent" are dictionaries containing the fighting clan's data, these have keys:
@@ -168,7 +221,7 @@ def wars_with_clan(battle_tags):
     clan_war_tags = {1: "#0", 2: "#0", 3: "#0", 4: "#0", 5: "#0", 6: "#0", 7: "#0"}
 
     # Loop through the rows of the DataFrame
-    for row in seasonal_battle_tag_df.itertuples():        
+    for row in battle_tags.itertuples():        
         # Find which wartag has Pussay in the war for that day
         for wartag in [row.wartag1, row.wartag2, row.wartag3, row.wartag4]:
             if wartag != "#0": # Skip empty tags
@@ -186,12 +239,13 @@ def wars_with_clan(battle_tags):
 if __name__ == "__main__":
     # Get the battle tags for the current war league
     seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
+    print("seasonal battle tag df: ", seasonal_battle_tag_df)
 
     # Save the battle tag DataFrame to a CSV file
     save_filepath = os.path.join(os.path.dirname(__file__), "battle_tags.csv")
     existing_data = pd.read_csv(save_filepath)
     newdata = append_days_to_dataframe(existing_data, seasonal_battle_tag_df, season)
-    newdata.to_csv(save_filepath, index=False)
+    # newdata.to_csv(save_filepath, index=False)
 
     # Print the DataFrame
     print("Battle tag DataFrame:")
@@ -219,7 +273,7 @@ if __name__ == "__main__":
     # Append the new data to the existing data
     new_pussay_data = append_days_to_dataframe(existing_pussay_data, reduced_warTag_df, season)
     # Save the new data to the CSV file
-    new_pussay_data.to_csv(save_filepath, index=False)
+    # new_pussay_data.to_csv(save_filepath, index=False)
 
     print("Reduced battle tag DataFrame:")
     print(new_pussay_data)
