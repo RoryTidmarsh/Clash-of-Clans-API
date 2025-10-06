@@ -173,18 +173,18 @@ def Pussay_in_war(battle_tag):
     war_data = war_response.json() # Keys ['state', 'teamSize', 'preparationStartTime', 'startTime', 'endTime', 'clan', 'opponent', 'warStartTime']
     # "clan" and "opponent" are dictionaries containing the fighting clan's data, these have keys:
     # ['tag', 'name', 'badgeUrls', 'clanLevel', 'attacks', 'stars', 'destructionPercentage', 'members']
-    
+    state = war_data["state"]
     if war_data["clan"]["name"] == clan_name or war_data["opponent"]["name"] == clan_name:
         if debug_print_statements:
             print(f"Clan is in war {battle_tag}")   
             print("Clan name: ", war_data["clan"]["name"])
             print("Opponent name: ", war_data["opponent"]["name"])
-        return True
+        return True, state
     
     else:
         if debug_print_statements:
             print(f"Clan is not in war {battle_tag}")  
-        return False
+        return False, state
     
 def wars_with_clan(battle_tags):
     """Check which wars in the list contain the clan.
@@ -197,22 +197,24 @@ def wars_with_clan(battle_tags):
         """
     # 7 day dictionary of war tags containing "#0" for empty tags
     clan_war_tags = {1: "#0", 2: "#0", 3: "#0", 4: "#0", 5: "#0", 6: "#0", 7: "#0"}
+    clan_war_states = {1: np.nan, 2: np.nan, 3: np.nan, 4: np.nan, 5: np.nan, 6: np.nan, 7: np.nan}
 
     # Loop through the rows of the DataFrame
     for row in battle_tags.itertuples():        
         # Find which wartag has Pussay in the war for that day
         for wartag in [row.wartag1, row.wartag2, row.wartag3, row.wartag4]:
             if wartag != "#0": # Skip empty tags
-                in_war = Pussay_in_war(wartag)
+                in_war,war_state = Pussay_in_war(wartag)
                 if in_war:
                     print(f"Pussay is in war {wartag} on day {row.battleday} of season {row.season}")
                     clan_war_tags[row.battleday] = wartag
+                    clan_war_states[row.battleday] = war_state
                     break # Exit the loop if we found the clan in the war
         # Create error messages
         if clan_war_tags[row.battleday] == "#0":
             print(f"Error: Clan not found in any war on day {row.battleday} of season {row.season}")
 
-    return clan_war_tags
+    return clan_war_tags, clan_war_states
 
 if __name__ == "__main__":
     # Get the battle tags for the current war league
@@ -230,7 +232,7 @@ if __name__ == "__main__":
     print(newdata.tail(8))
 
     # Find which wars the clan is in
-    clan_war_tags = wars_with_clan(seasonal_battle_tag_df)    
+    clan_war_tags,clan_war_states = wars_with_clan(seasonal_battle_tag_df)    
     print("Clan war tags for the week:", clan_war_tags)
     # Create a reduced DataFrame with only the war tags containing the clan, columns: battleday, wartag, season
     reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])

@@ -3,6 +3,12 @@ import numpy as np
 import requests
 import os
 import json
+from datetime import datetime
+import sys
+import io
+
+# Force UTF-8 encoding for stdout
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # Dictionary containing the API key, add your own key for your IP address
 # You can get your own key from https://developer.clashofclans.com
@@ -168,7 +174,7 @@ def get_war_stats(battle_tag):
         state = war_data["state"]
         if state == "notInWar":
             raise ValueError(f'Clan is not in war. Current state: "{state}"')
-        elif state in ["inWar", "warEnded"]:
+        elif state in ["inWar", "warEnded", "preparation"]:
             print(f'War state: "{state}"')
         else:
             print(f"Warning: Unexpected war state: {state}")
@@ -206,6 +212,244 @@ def get_war_stats(battle_tag):
 
     return war_info_df, war_data["state"]
 
+class WarDataManager:
+    def __init__(self, status_file_path="war_status.csv", data_folder="war_data"):
+        """
+        Initialize the War Data Manager
+        
+        Args:
+            status_file_path: Path to CSV tracking war status
+            data_folder: Folder where individual war data files are stored
+        """
+        self.status_file_path = status_file_path
+        self.data_folder = data_folder
+        
+        # Create data folder if it doesn't exist
+        os.makedirs(data_folder, exist_ok=True)
+        
+        # Load or create status tracking file
+        if os.path.exists(status_file_path):
+            self.status_df = pd.read_csv(status_file_path)
+        else:
+            self.status_df = pd.DataFrame(columns=[
+                'wartag', 'COC_war_status', 'loading_status', 'last_updated', 'data_file'
+            ])
+
+    def should_load_war(self, wartag):
+        """
+        Check if a war should be loaded from the API
+        
+        Args:
+            wartag: The war tag to check
+            
+        Returns:
+            bool: True if war should be loaded, False if it can be skipped
+        """
+        # Check if war tag exists in status tracking
+        war_status = self.status_df[self.status_df['wartag'] == wartag]
+        
+        if war_status.empty:
+            # War not tracked yet, should load
+            print(f"War {wartag} not tracked yet. Will load.")
+            return True
+        
+        loading_status = war_status.iloc[0]['loading_status']
+        coc_status = war_status.iloc[0]['COC_war_status']
+        
+        # skip if loading_status is 'completed'
+        if loading_status == 'completed':
+            print(f"War {wartag} already completed (COC status: {coc_status}). Skipping.")
+            return False
+        
+        # Reload if 'notLoaded' or 'inProgress'
+        print(f"War {wartag} loading status: {loading_status}, COC status: {coc_status}. Will reload.")
+        return True
+    
+    def determine_loading_status(self, coc_war_status):
+        """
+        Determine the loading_status based on COC war status
+        
+        Args:
+            coc_war_status: Status returned from COC API
+            
+        Returns:
+            str: loading_status ('notLoaded', 'inProgress', or 'completed')
+        """
+        if coc_war_status == "warEnded":
+            return "completed"
+        elif coc_war_status in ["inWar", "preparation"]:
+            return "inProgress"
+        else:
+            # This shouldn't normally happen, but default to notLoaded
+            return "notLoaded"
+        
+    def get_war_data_path(self, wartag):
+        """Generate file path for storing war data"""
+        # Clean the wartag for use in filename
+        clean_tag = wartag.replace('#', '').replace('%23', '')
+        return os.path.join(self.data_folder, f"war_{clean_tag}.csv")
+    
+    def save_war_data(self, wartag, war_df, coc_war_status):
+        """
+        Save war data and update status tracking
+        
+        Args:
+            wartag: The war tag
+            war_df: DataFrame containing war data
+            coc_war_status: Current status of the war from COC API 
+                           ('inWar', 'warEnded', 'preparation')
+        """
+        # Save the war data
+        data_path = self.get_war_data_path(wartag)
+        war_df.to_csv(data_path, index=False)
+        
+        # Determine loading status based on COC war status
+        loading_status = self.determine_loading_status(coc_war_status)
+        
+        # Update status tracking
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Remove existing entry if present
+        self.status_df = self.status_df[self.status_df['wartag'] != wartag]
+        
+        # Add new entry
+        new_row = pd.DataFrame([{
+            'wartag': wartag,
+            'COC_war_status': coc_war_status,
+            'loading_status': loading_status,
+            'last_updated': current_time,
+            'data_file': data_path
+        }])
+        
+        self.status_df = pd.concat([self.status_df, new_row], ignore_index=True)
+        
+        # Save status file
+        self.status_df.to_csv(self.status_file_path, index=False)
+        
+        status_symbol = "✓" if loading_status == "completed" else "⋯"
+        print(f"{status_symbol} Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
+
+    def load_cached_war_data(self, wartag):
+        """
+        Load previously saved war data if available
+        
+        Args:
+            wartag: The war tag
+            
+        Returns:
+            pd.DataFrame or None: War data if available, None otherwise
+        """
+        data_path = self.get_war_data_path(wartag)
+        
+        if os.path.exists(data_path):
+            return pd.read_csv(data_path)
+        return None
+    
+    def process_war(self, wartag, get_war_stats_func, season=None, cwl_day=None):
+        """
+        Process a single war - either load from cache or fetch from API
+        
+        Args:
+            wartag: The war tag
+            get_war_stats_func: Function to call to get war stats from API
+                               Should return (war_df, coc_war_status)
+            season: Season identifier (e.g., "2025-10") - will be added to DataFrame
+            cwl_day: CWL day number (e.g., 1-7) - will be added to DataFrame
+            
+        Returns:
+            tuple: (war_df, coc_war_status, loading_status, was_cached)
+        """
+        # Check if we should load from API
+        if not self.should_load_war(wartag):
+            # Load from cache
+            cached_data = self.load_cached_war_data(wartag)
+            if cached_data is not None:
+                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                # Add season and cwl_day if not already present
+                if season is not None and 'season' not in cached_data.columns:
+                    cached_data['season'] = season
+                if cwl_day is not None and 'cwl_day' not in cached_data.columns:
+                    cached_data['cwl_day'] = cwl_day
+                return (
+                    cached_data, 
+                    war_status['COC_war_status'],
+                    war_status['loading_status'],
+                    True
+                )
+        
+        # Load from API
+        try:
+            war_df, coc_war_status = get_war_stats_func(wartag)
+            
+            # Add season and cwl_day columns
+            if season is not None:
+                war_df['season'] = season
+            if cwl_day is not None:
+                war_df['cwl_day'] = cwl_day
+            
+            # Determine loading status
+            loading_status = self.determine_loading_status(coc_war_status)
+            
+            # Save the data
+            self.save_war_data(wartag, war_df, coc_war_status)
+            
+            return war_df, coc_war_status, loading_status, False
+            
+        except Exception as e:
+            print(f"Error loading war {wartag}: {e}")
+            # Try to return cached data if available
+            cached_data = self.load_cached_war_data(wartag)
+            if cached_data is not None:
+                print(f"⚠ Returning cached data for {wartag} due to API error")
+                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                # Add season and cwl_day if not already present
+                if season is not None and 'season' not in cached_data.columns:
+                    cached_data['season'] = season
+                if cwl_day is not None and 'cwl_day' not in cached_data.columns:
+                    cached_data['cwl_day'] = cwl_day
+                return (
+                    cached_data,
+                    war_status['COC_war_status'],
+                    war_status['loading_status'],
+                    True
+                )
+            raise
+    
+    def get_status_summary(self):
+        """
+        Get a summary of all tracked wars
+        
+        Returns:
+            dict: Summary statistics
+        """
+        if self.status_df.empty:
+            return {
+                'total_wars': 0,
+                'completed': 0,
+                'in_progress': 0,
+                'not_loaded': 0
+            }
+        
+        return {
+            'total_wars': len(self.status_df),
+            'completed': len(self.status_df[self.status_df['loading_status'] == 'completed']),
+            'in_progress': len(self.status_df[self.status_df['loading_status'] == 'inProgress']),
+            'not_loaded': len(self.status_df[self.status_df['loading_status'] == 'notLoaded'])
+        }
+    
+    def __repo__(self):
+        """Print a formatted summary of war statuses"""
+        summary = self.get_status_summary()
+        print("\n" + "="*50)
+        print("WAR DATA STATUS SUMMARY")
+        print("="*50)
+        print(f"Total Wars Tracked:     {summary['total_wars']}")
+        print(f"✓ Completed:            {summary['completed']}")
+        print(f"⋯ In Progress:          {summary['in_progress']}")
+        print(f"○ Not Loaded:           {summary['not_loaded']}")
+        print("="*50 + "\n")
+    
+
 def gather_season_data(season):
     """This function retrieves the war stats for a given season from the Clash of Clans API for the 'Pussay Palace' clan.
 
@@ -242,14 +486,17 @@ if __name__ == "__main__":
         print("Pussay war tags: \n", Pussay_wars_df)
 
     Pussay_warTags = Pussay_wars_df["wartag"]
-
+    print(Pussay_warTags)
     #Finding the most recent war
 
-    # print(Pussay_warTags[16])
-    war_info_df, war_state  = get_war_stats(Pussay_warTags[0]) #"#8Q9208GJ0"
-    print(war_state)
-    # print(war_info_df.info())
-    # print(war_info_df[["defense_th_diff", "attacker_townhallLevel"]])
+    # Load war data
+    war_info_df, war_state  = get_war_stats(Pussay_warTags[17]) #"#8Q9208GJ0"
+
+    print(war_info_df.info())
+
+
+
+
 # # Load the season data
 # season_data = gather_season_data("2025-10")
 # print(season_data.info())
