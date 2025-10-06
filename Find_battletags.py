@@ -101,70 +101,48 @@ def append_days_to_dataframe(existing_data, new_df, season):
         pd.DataFrame: DataFrame with the new battleday data appended
     """
     # Check that there is only 1 season in the new_df
+    unique_seasons = new_df["season"].unique()
+    if len(unique_seasons) != 1:
+        raise ValueError(f'More than 1 season in the new data. Found seasons: {unique_seasons}')
     
-    if len(new_df["season"].unique()) != 1:
-        raise ValueError(f'More than 1 season in the new data, new_df.unique = {new_df["season"].unique()}')
-    else:
-        season = new_df["season"].unique()[0]
-    # Check if the current season is already in the DataFrame
-    if season in new_df["season"].values:
-        print(f"Season {season} is already in the DataFrame.")
-
+    new_season = unique_seasons[0]
+    
+    # Verify the season matches the input parameter
+    if new_season != season:
+        raise ValueError(f'Season mismatch: expected {season}, but new_df contains {new_season}')
+    
+    # Column headers check
+    existing_col_headings = list(existing_data.columns)
+    new_col_headings = list(new_df.columns)
+    
+    if existing_col_headings != new_col_headings:
+        raise ValueError(f"Column headers don't match!\nExisting: {existing_col_headings}\nNew: {new_col_headings}")
+    
+    print(f"Processing season: {season}")
+    
+    # Check if the current season exists in the existing data
+    if season in existing_data["season"].values:
+        print(f"Season {season} found in existing data. Replacing all data for this season...")
         
-
-        # Column headers
-        existing_col_headings = existing_data.columns.values
-        new_col_headings = existing_data.columns.values
-        assert np.array_equal(existing_col_headings, new_col_headings), \
-            f"Column headers don't match!\nExisting: {existing_col_headings}\nNew: {new_col_headings}"
+        # Remove all existing rows for this season
+        updated_df = existing_data[existing_data["season"] != season].copy()
         
-        # Use bitwise & instead of 'and', and check all varying columns for "#0"
-        varying_cols_existing = existing_col_headings[1:-1]  # All columns except battleday and season
-        varying_cols_new = new_col_headings[1:-1]
-
-        # Create filter for current season
-        season_filt_existing = existing_data["season"] == season
-        season_filt_new = new_df["season"] == season
-
-        # Create filter to exclude rows with "#0" in any of the varying columns
-        no_zero_filt_existing = ~existing_data[varying_cols_existing].isin(["#0"]).any(axis=1)
-        no_zero_filt_new = ~new_df[varying_cols_new].isin(["#0"]).any(axis=1)
-
-        # Combine filters
-        filt_existing = season_filt_existing & no_zero_filt_existing
-        filt_new = season_filt_new & no_zero_filt_new
-
-        # Find the largest battleday for the current season
-        max_battleday_exisiting = existing_data[filt_existing]["battleday"].max()
-        max_battleday_new = new_df[filt_new]["battleday"].max()
-
-        print("Max battleday from new data:", max_battleday_new)
-        print("Max battleday from exisiting data:", max_battleday_exisiting)
-
-        if max_battleday_new != max_battleday_exisiting:
-            updated_df = existing_data.copy()
-
-            update_filt = (updated_df["battleday"] > max_battleday_exisiting) & (updated_df["season"]==season)
-            new_filt = (updated_df["battleday"] > max_battleday_exisiting) & (updated_df["season"]==season)
-            
-            # Get the varying columns (everything except battleday and season)
-            varying_cols = new_col_headings[1:-1]
-            
-            # Replace the varying columns with new data
-            updated_df.loc[update_filt, varying_cols] = new_df.loc[new_filt, varying_cols].values
-            
-            print(f"Updated {update_filt.sum()} rows for battledays > {max_battleday_exisiting}")
-            
-        else:
-            print("No new battledays to update")
-            updated_df = existing_data.copy()
-            
-        # # Append data for the current season over the max battleday
-        # append_data = new_df[(new_df["season"] == season) & (new_df["battleday"] > max_battleday_exisiting)]
-        # newdata = pd.concat([existing_data, append_data], ignore_index=True)
+        # Append all new data for this season
+        updated_df = pd.concat([updated_df, new_df], ignore_index=True)
+        
+        # Sort by season and battleday for cleaner organization
+        updated_df = updated_df.sort_values(by=["season", "battleday"]).reset_index(drop=True)
+        
+        rows_removed = (existing_data["season"] == season).sum()
+        rows_added = len(new_df)
+        print(f"Removed {rows_removed} existing rows for season {season}")
+        print(f"Added {rows_added} new rows for season {season}")
+        
     else:
-        print(f"Season {season} is not in the DataFrame.")
+        print(f"Season {season} not found in existing data. Appending as new season...")
         updated_df = pd.concat([existing_data, new_df], ignore_index=True)
+        updated_df = updated_df.sort_values(by=["season", "battleday"]).reset_index(drop=True)
+        print(f"Added {len(new_df)} rows for new season {season}")
     
     return updated_df
 
@@ -245,7 +223,7 @@ if __name__ == "__main__":
     save_filepath = os.path.join(os.path.dirname(__file__), "battle_tags.csv")
     existing_data = pd.read_csv(save_filepath)
     newdata = append_days_to_dataframe(existing_data, seasonal_battle_tag_df, season)
-    # newdata.to_csv(save_filepath, index=False)
+    newdata.to_csv(save_filepath, index=False)
 
     # Print the DataFrame
     print("Battle tag DataFrame:")
@@ -273,7 +251,7 @@ if __name__ == "__main__":
     # Append the new data to the existing data
     new_pussay_data = append_days_to_dataframe(existing_pussay_data, reduced_warTag_df, season)
     # Save the new data to the CSV file
-    # new_pussay_data.to_csv(save_filepath, index=False)
+    new_pussay_data.to_csv(save_filepath, index=False)
 
-    print("Reduced battle tag DataFrame:")
-    print(new_pussay_data)
+    print("Reduced battle tag DataFrame tail:")
+    print(new_pussay_data.tail(7))
