@@ -372,21 +372,21 @@ class WarDataManager:
         """
         # Check if we should load from API
         if not self.should_load_war(wartag):
-            # Load from cache
+            # Try cache — but if none, just return immediately and do NOT call API
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
                 war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
-                # Add season and cwl_day if not already present
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
                 if cwl_day is not None and 'cwl_day' not in cached_data.columns:
                     cached_data['cwl_day'] = cwl_day
-                return (
-                    cached_data, 
-                    war_status['COC_war_status'],
-                    war_status['loading_status'],
-                    True
-                )
+                return cached_data, war_status['COC_war_status'], war_status['loading_status'], True
+            
+            # ✅ NO CACHE — means this war is permanently skipped
+            war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+            print(f"⚠ No cached data for {wartag} — but it's marked as '{war_status['loading_status']}'. Skipping API call.")
+            return pd.DataFrame(), war_status['COC_war_status'], war_status['loading_status'], False
+
         
         # Load from API
         try:
