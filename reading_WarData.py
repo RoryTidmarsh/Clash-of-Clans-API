@@ -257,8 +257,8 @@ class WarDataManager:
         coc_status = war_status.iloc[0]['COC_war_status']
         
         # skip if loading_status is 'completed'
-        if loading_status == 'completed':
-            print(f"War {wartag} already completed (COC status: {coc_status}). Skipping.")
+        if loading_status in ['completed', "Error - too old"]:
+            print(f"War {wartag} already marked as '{loading_status}' (COC status: {coc_status}). Skipping.")
             return False
         
         # Reload if 'notLoaded' or 'inProgress'
@@ -279,6 +279,8 @@ class WarDataManager:
             return "completed"
         elif coc_war_status in ["inWar", "preparation"]:
             return "inProgress"
+        elif coc_war_status == "notInWar":
+            return "Error - too old"
         else:
             # This shouldn't normally happen, but default to notLoaded
             return "notLoaded"
@@ -299,9 +301,13 @@ class WarDataManager:
             coc_war_status: Current status of the war from COC API 
                            ('inWar', 'warEnded', 'preparation')
         """
-        # Save the war data
-        data_path = self.get_war_data_path(wartag)
-        war_df.to_csv(data_path, index=False)
+        # Only save war data if it's not empty
+        if war_df is not None and not war_df.empty:
+            data_path = self.get_war_data_path(wartag)
+            war_df.to_csv(data_path, index=False)
+        else:
+            # Mark as no data
+            data_path = None
         
         # Determine loading status based on COC war status
         loading_status = self.determine_loading_status(coc_war_status)
@@ -318,7 +324,8 @@ class WarDataManager:
             'COC_war_status': coc_war_status,
             'loading_status': loading_status,
             'last_updated': current_time,
-            'data_file': data_path
+            'data_file': data_path if data_path else ""
+
         }])
         
         self.status_df = pd.concat([self.status_df, new_row], ignore_index=True)
@@ -327,7 +334,11 @@ class WarDataManager:
         self.status_df.to_csv(self.status_file_path, index=False)
         
         status_symbol = "✓" if loading_status == "completed" else "⋯"
-        print(f"{status_symbol} Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
+        if coc_war_status == "notInWar" or loading_status in ["Error - too old", "notLoaded"]:
+            print(f"✗ Skipping war {wartag} | Marked as {coc_war_status} ({loading_status}) — will not reload again.")
+        else:
+            print(f"⋯ Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
+        # print(f"{status_symbol} Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
 
     def load_cached_war_data(self, wartag):
         """
@@ -397,6 +408,17 @@ class WarDataManager:
             
         except Exception as e:
             print(f"Error loading war {wartag}: {e}")
+
+            # If war is in "notInWar" or too old, mark it as such in `war_status.csv`
+            if "notInWar" in str(e) or "too long ago" in str(e):
+                self.save_war_data(
+                    wartag,
+                    war_df=pd.DataFrame(),        # empty since no data
+                    coc_war_status="notInWar"     # mark as not available
+                )
+                return pd.DataFrame(), "notInWar", "Error - too old", False
+
+
             # Try to return cached data if available
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
@@ -434,20 +456,26 @@ class WarDataManager:
             'total_wars': len(self.status_df),
             'completed': len(self.status_df[self.status_df['loading_status'] == 'completed']),
             'in_progress': len(self.status_df[self.status_df['loading_status'] == 'inProgress']),
-            'not_loaded': len(self.status_df[self.status_df['loading_status'] == 'notLoaded'])
+            'not_loaded': len(self.status_df[self.status_df['loading_status'].isin(['notLoaded'])]),
+            'too_old': len(self.status_df[self.status_df['loading_status'] == 'Error - too old'])
         }
     
-    def __repo__(self):
-        """Print a formatted summary of war statuses"""
+    def __repr__(self):
+        """Return a formatted summary of war statuses"""
         summary = self.get_status_summary()
-        print("\n" + "="*50)
-        print("WAR DATA STATUS SUMMARY")
-        print("="*50)
-        print(f"Total Wars Tracked:     {summary['total_wars']}")
-        print(f"✓ Completed:            {summary['completed']}")
-        print(f"⋯ In Progress:          {summary['in_progress']}")
-        print(f"○ Not Loaded:           {summary['not_loaded']}")
-        print("="*50 + "\n")
+        lines = [
+            "\n" + "=" * 50,
+            "WAR DATA STATUS SUMMARY",
+            "=" * 50,
+            f"Total Wars Tracked:     {summary['total_wars']}",
+            f"✓ Completed:            {summary['completed']}",
+            f"⋯ In Progress:          {summary['in_progress']}",
+            f"○ Not Loaded:           {summary['not_loaded']}",
+            f"✗ Too Old to Load:      {summary['too_old']}",
+            "=" * 50 + "\n"
+        ]
+        return "\n".join(lines)
+
     
 
 def gather_season_data(season):
@@ -480,21 +508,82 @@ def gather_season_data(season):
     return base_df
 
 
+# if __name__ == "__main__":
+#     Pussay_wars_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv"))
+#     if debug_print_statements:
+#         print("Pussay war tags: \n", Pussay_wars_df)
+
+#     Pussay_warTags = Pussay_wars_df["wartag"]
+#     print(Pussay_warTags)
+#     #Finding the most recent war
+
+#     # Load war data
+#     war_info_df, war_state  = get_war_stats(Pussay_warTags[17]) #"#8Q9208GJ0"
+
+#     print(war_info_df.info())
+
+# Example usage in your main code:
 if __name__ == "__main__":
-    Pussay_wars_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv"))
-    if debug_print_statements:
-        print("Pussay war tags: \n", Pussay_wars_df)
-
-    Pussay_warTags = Pussay_wars_df["wartag"]
-    print(Pussay_warTags)
-    #Finding the most recent war
-
-    # Load war data
-    war_info_df, war_state  = get_war_stats(Pussay_warTags[17]) #"#8Q9208GJ0"
-
-    print(war_info_df.info())
-
-
+    # Initialize the manager
+    war_manager = WarDataManager(
+        status_file_path="war_status.csv",
+        data_folder="war_data"
+    )
+    
+    # Load your battle tags CSV
+    Pussay_wars_df = pd.read_csv("Pussay_battle_tags.csv")
+    
+    # Process each war
+    all_wars_data = []
+    
+    for idx, row in Pussay_wars_df.iterrows():
+        wartag = row['wartag']
+        battleday = row['battleday']
+        season = row['season']
+        
+        # Skip placeholder tags
+        if wartag == "#0":
+            print(f"○ Skipping placeholder war tag for Season {season}, Battle Day {battleday}")
+            continue
+        
+        print(f"\n--- Season {season}, Battle Day {battleday}: {wartag} ---")
+        
+        try:
+            # Process the war (will use cache if completed)
+            war_df, coc_status, loading_status, was_cached = war_manager.process_war(
+                wartag, 
+                get_war_stats  # Your existing function
+            )
+            
+            # Add metadata
+            war_df['battleday'] = battleday
+            war_df['season'] = season
+            war_df['wartag'] = wartag
+            
+            all_wars_data.append(war_df)
+            
+            if was_cached:
+                print(f"  → Loaded from cache")
+            elif coc_status == "notInWar" or loading_status in ["Error - too old", "notLoaded"]:
+                pass
+            else:
+                print(f"  → Fetched from API")
+                
+        except ValueError as e:
+            # Handle "notInWar" or other API errors
+            print(f"✗ Could not load war {wartag}: {e}")
+            continue
+    
+    # Print summary
+    print(war_manager)
+    
+    # Combine all wars into single DataFrame
+    if all_wars_data:
+        combined_df = pd.concat(all_wars_data, ignore_index=True)
+        print(f"Successfully loaded {len(all_wars_data)} wars")
+        print(f"Total player records: {len(combined_df)}")
+    else:
+        print("No war data loaded.")
 
 
 # # Load the season data
