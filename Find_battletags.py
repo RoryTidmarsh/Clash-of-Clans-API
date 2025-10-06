@@ -3,16 +3,13 @@ import numpy as np
 import requests
 from dotenv import load_dotenv
 import os
-
+from supabase_client import supabase # Import supabase client to load .env variables
 # Load environment variables from .env file
 load_dotenv()
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 coc_api_key = os.getenv("COC_API_KEY")
 
-# Load Supabase client
-from supabase import create_client
-supabase = create_client(url, key)
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
