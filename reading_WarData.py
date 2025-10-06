@@ -12,6 +12,10 @@ url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 coc_api_key = os.getenv("COC_API_KEY")
 
+# Load Supabase client
+from supabase import create_client
+supabase = create_client(url, key)
+
 # Force UTF-8 encoding for stdout
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 

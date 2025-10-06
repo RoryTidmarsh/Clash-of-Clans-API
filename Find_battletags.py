@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
 import requests
-import os
-import json
-
 from dotenv import load_dotenv
 import os
 
@@ -12,6 +9,10 @@ load_dotenv()
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 coc_api_key = os.getenv("COC_API_KEY")
+
+# Load Supabase client
+from supabase import create_client
+supabase = create_client(url, key)
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
