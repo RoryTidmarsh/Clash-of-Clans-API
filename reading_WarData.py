@@ -1,20 +1,19 @@
 import pandas as pd
 import numpy as np
 import requests
-import os
-import json
-from datetime import datetime
 import sys
 import io
+from datetime import datetime
+from dotenv import load_dotenv
+import os
+# Load environment variables from .env file
+load_dotenv()
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
+coc_api_key = os.getenv("COC_API_KEY")
 
 # Force UTF-8 encoding for stdout
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-
-# Dictionary containing the API key, add your own key for your IP address
-# You can get your own key from https://developer.clashofclans.com
-keys_file_path = os.path.join(os.path.dirname(__file__), "keys.json")
-with open(keys_file_path, "r") as keys_file:
-    keys = json.load(keys_file)
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
@@ -23,7 +22,7 @@ base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
-    "authorization": "Bearer %s" % keys["rory_home"]
+    "authorization": "Bearer %s" % coc_api_key
 }
 debug_print_statements = False
 

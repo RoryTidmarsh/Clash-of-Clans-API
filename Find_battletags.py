@@ -4,13 +4,14 @@ import requests
 import os
 import json
 
-# Dictionary containing the API key, add your own key for your IP address
-# You can get your own key from https://developer.clashofclans.com
-# Load API keys from a JSON file
+from dotenv import load_dotenv
+import os
 
-keys_file_path = os.path.join(os.path.dirname(__file__), "keys.json")
-with open(keys_file_path, "r") as keys_file:
-    keys = json.load(keys_file)
+# Load environment variables from .env file
+load_dotenv()
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
+coc_api_key = os.getenv("COC_API_KEY")
 
 # Pussay Clan Tag
 clan_tag = "%23CQGY2LQU"
@@ -19,7 +20,7 @@ base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
-    "authorization": "Bearer %s" % keys["rory_home"],
+    "authorization": "Bearer %s" % coc_api_key,
 }
 debug_print_statements = False
 # Make the request to the API
