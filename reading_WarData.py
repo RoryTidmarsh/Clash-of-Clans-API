@@ -17,18 +17,130 @@ base_url = "https://api.clashofclans.com/v1"
 url = base_url + f"/clans/{clan_tag}"
 headers = {
     "Accept": "application/json",
-    "authorization": "Bearer %s" % keys["rory_desktop"],
+    "authorization": "Bearer %s" % keys["rory_home"]
 }
 debug_print_statements = False
 
-Pussay_wars_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv"))
-if debug_print_statements:
-    print("Pussay war tags: \n", Pussay_wars_df)
+# Response codes from the API
+response_codes = {
+    200: "Success",
+    400: "Client provided incorrect parameters for the request.",
+    403: "Access denied, either because of missing/incorrect credentials or used API token does not grant access to the requested resource. Check the Api Key.",
+    404: "The requested resource does not exist.",
+    429: "Too many requests. You are rate limited. Wait before sending more requests.",
+    500: "Server error. Something is wrong on Clash of Clans side.",
+    503: "Server is down for maintenance.",
+}
 
-Pussay_warTags = Pussay_wars_df["wartag"]
+class member():
+    def __init__(self, member_json):
+        self.tag = member_json["tag"]
+        self.name = member_json["name"]
+        self.townhallLevel = member_json["townhallLevel"]
+        self.mapPosistion = member_json["mapPosition"]
 
-# Load a war
-battle_tag = Pussay_warTags[0]
+        self.attacker_townhallLevel = np.nan    #TH level of the opponent that is attacking us
+        self.defender_townhallLevel = np.nan    #TH level of the opponent we attacked
+        self.attack_th_diff = np.nan    # TH diff compared to the opponent we attacked
+        self.defense_th_diff = np.nan   # TH diff compared to the opponent that attacked us
+        
+        if "attacks" not in member_json or member_json["attacks"] is None:
+            self.attack_stars = np.nan
+            self.attack_percentage = np.nan
+            self.attack_duration = np.nan
+            self.defender_tag = np.nan  # Tag of person we attack
+            if debug_print_statements: print(f"Member '{member_json['name']}' has not attacked.")
+
+        else:
+            self.attack_stars = member_json["attacks"][0]["stars"]
+            self.attack_percentage = member_json["attacks"][0]["destructionPercentage"]
+            self.attack_duration = member_json["attacks"][0]["duration"]
+            self.defender_tag = member_json["attacks"][0]["defenderTag"]    # Tag of person we attack
+
+        if "bestOpponentAttack" not in member_json or member_json["bestOpponentAttack"] is None:
+            self.defense_stars = np.nan
+            self.defense_percentage = np.nan
+            self.defense_duration = np.nan
+            self.attacker_tag = np.nan  # Opponent that attacks our clan
+            if debug_print_statements: print(f"Member '{member_json['name']}' has not been attacked.")
+
+        else:
+            self.defense_stars = member_json["bestOpponentAttack"]["stars"]
+            self.defense_percentage = member_json["bestOpponentAttack"]["destructionPercentage"]
+            self.defense_duration = member_json["bestOpponentAttack"]["duration"]
+            self.attacker_tag = member_json["bestOpponentAttack"]["attackerTag"]     # Opponent that attacks our clan
+
+    def __repr__(self):
+        if not np.isnan(self.attack_stars):
+            th_diff = self.attack_th_diff if not np.isnan(self.defender_townhallLevel) else "?"
+            th_info = f" (TH{th_diff:+d})" if th_diff != "?" else ""
+            attack_info = f"{self.attack_stars}★ ({self.attack_percentage}%) vs {self.defender_tag}{th_info}"
+        else:
+            attack_info = "No attack"
+        
+        if not np.isnan(self.defense_stars):
+            th_diff = self.defense_th_diff if not np.isnan(self.attacker_townhallLevel) else "?"
+            th_info = f" (TH{th_diff:+d})" if th_diff != "?" else ""
+            defense_info = f"{self.defense_stars}★ ({self.defense_percentage}%) from {self.attacker_tag}{th_info}"
+        else:
+            defense_info = "Not attacked"
+        
+        return (f"Member({self.name}, tag={self.tag}, TH{self.townhallLevel}, pos={self.mapPosistion})\n"
+                f"  Attack: {attack_info}\n"
+                f"  Defense: {defense_info}")
+
+    def find_attacker_TH_level(self, opponent_member_json):
+        # self.attacker_tag
+        # Opponent_tags = opponent_member_json["attackerTag"]
+
+        # Find the TH level of the person we attacked
+        if self.defender_tag != np.nan:
+            for opponent in opponent_member_json["members"]:
+                if opponent["tag"] == self.defender_tag:
+                    self.defender_townhallLevel = opponent["townhallLevel"]
+                    break
+
+        # Find the TH level of the person that attacked us
+        if self.attacker_tag != np.nan:
+            for opponent in opponent_member_json["members"]:
+                if opponent["tag"] == self.attacker_tag:
+                    self.attacker_townhallLevel = opponent["townhallLevel"]
+                    break
+
+        self.attack_th_diff = (self.defender_townhallLevel - self.townhallLevel 
+                        if not np.isnan(self.defender_townhallLevel) else np.nan)
+        self.defense_th_diff = (self.attacker_townhallLevel - self.townhallLevel 
+                        if not np.isnan(self.attacker_townhallLevel) else np.nan)
+
+        if debug_print_statements: print(f"attacker TH level {self.attacker_townhallLevel}, defender TH level {self.defender_townhallLevel}")
+
+    def to_dataframe_row(self):
+        """Returns a dictionary of all member attributes suitable for adding to a DataFrame."""
+        # Calculate TH differences
+        # attack_th_diff = (self.defender_townhallLevel - self.townhallLevel 
+        #                 if not np.isnan(self.defender_townhallLevel) else np.nan)
+        # defense_th_diff = (self.attacker_townhallLevel - self.townhallLevel 
+        #                 if not np.isnan(self.attacker_townhallLevel) else np.nan)
+        
+        return {
+            'tag': self.tag,
+            'name': self.name,
+            'townhallLevel': self.townhallLevel,
+            'mapPosition': self.mapPosistion,
+            'attacker_townhallLevel': self.attacker_townhallLevel,
+            'defender_townhallLevel': self.defender_townhallLevel,
+            'attack_th_diff': self.attack_th_diff,  # Positive means attacked higher TH
+            'defense_th_diff': self.defense_th_diff,  # Positive means defended against higher TH
+            'attack_stars': self.attack_stars,
+            'attack_percentage': self.attack_percentage,
+            'attack_duration': self.attack_duration,
+            'defender_tag': self.defender_tag,
+            'defense_stars': self.defense_stars,
+            'defense_percentage': self.defense_percentage,
+            'defense_duration': self.defense_duration,
+            'attacker_tag': self.attacker_tag
+        }
+               
 def get_war_stats(battle_tag):
     """This function retrieves the war stats for a given battle tag from the Clash of Clans API for the 'Pussay Palace' clan.
 
@@ -43,83 +155,56 @@ def get_war_stats(battle_tag):
 
     # Make the request to the API
     war_response = requests.get(war_link, headers=headers)
+
+    if war_response.status_code != 200:
+        error_msg = response_codes.get(war_response.status_code, "Unknown error")
+        raise ValueError(f"API request failed with status code {war_response.status_code}: {error_msg}")
+
     print(battle_tag, war_response)
     war_data = war_response.json()
-    if debug_print_statements: 
-        print("War response code: ", war_response, "\nPussay war data keys: ", war_data.keys())
-        print(war_data["clan"]["members"][2].keys()) # keys: ['tag', 'name', 'townhallLevel', 'mapPosition', 'attacks', 'opponentAttacks', 'bestOpponentAttack']
 
+    # Check if clan is in a war or if war data is accessible
+    if "state" in war_data:
+        state = war_data["state"]
+        if state == "notInWar":
+            raise ValueError(f'Clan is not in war. Current state: "{state}"')
+        elif state in ["inWar", "warEnded"]:
+            print(f'War state: "{state}"')
+        else:
+            print(f"Warning: Unexpected war state: {state}")
+    elif "clan" not in war_data:
+        raise ValueError(f"Clan War not accessible. War occurred too long ago or data is unavailable. War state: {war_data["state"]}")
+    
     #### Want a dataframe for each member countaining the following:
     # Name, Battleday, TH level, Attack stars, Attack %, Attack Duration, Defense stars, Defense %, Opponent TH level, season
 
-    # Finding if Pussay is stored as clan or opponent
+    
+    # # Finding if Pussay is stored as clan or opponent
     Pussay_clan_or_opponent = "clan" if war_data["clan"]["name"] == clan_name else "opponent"
     Opponent_clan_or_opponent = "opponent" if Pussay_clan_or_opponent == "clan" else "clan"
     if debug_print_statements:
         print("Pussay clan or opponent: ", Pussay_clan_or_opponent)
         print("Opponent clan name: ", war_data[Opponent_clan_or_opponent]["name"])
 
-    ### Accessing the attack and defense information for a member
-    Pussay_members_df = pd.DataFrame(columns=["name", "townHallLevel", "attackStars", "attackPercentage", "attackDuration", "defenseStars", "defensePercentage", "defenseDuration", "opponentTHLevel"])
+    # Empty array to store data in
+    member_array = []
+
+    # Search through each member and collect data
     for member_index in range(len(war_data[Pussay_clan_or_opponent]["members"])):
         member_info = war_data[Pussay_clan_or_opponent]["members"][member_index]
         
-        # if debug_print_statements:
-            # print(war_data["clan"]["members"][member_index].keys())  # Access: attack stars,%, Attack duration
-            # print(war_data["clan"]["members"][member_index]["bestOpponentAttack"]) # Access: Defense stars,%, Defense duration
-            # print("Member info: ", member_info)
-            # print("Member keys: ", member_info.keys()) # keys: ['tag', 'name', 'townhallLevel', 'mapPosition', 'attacks', 'opponentAttacks', 'bestOpponentAttack']
+        # Collect data using 'member' class
+        clan_member = member(member_info)
+        clan_member.find_attacker_TH_level(war_data[Opponent_clan_or_opponent])
 
-        member_th_level = member_info["townhallLevel"]
-        if "attacks" not in member_info or member_info["attacks"] is None:
-            attack_stars = np.nan
-            attack_percentage = np.nan
-            attack_duration = np.nan
-            if debug_print_statements: print(f"Member '{member_info['name']}' has not attacked.")
-            
+        member_array.append(clan_member)
+        print(clan_member)
+    assert len(member_array) == len(war_data[Pussay_clan_or_opponent]["members"])
 
-        else:
-            attack_stars = member_info["attacks"][0]["stars"]
-            attack_percentage = member_info["attacks"][0]["destructionPercentage"]
-            attack_duration = member_info["attacks"][0]["duration"]
-            
+    # Store information in a dataframe
+    war_info_df = pd.DataFrame([m.to_dataframe_row() for m in member_array])
 
-        # Filtering if the member has been attacked
-        if member_info["opponentAttacks"] > 0:
-            defense_stars = member_info["bestOpponentAttack"]["stars"]
-            defense_percentage = member_info["bestOpponentAttack"]["destructionPercentage"]
-            defense_duration = member_info["bestOpponentAttack"]["duration"]
-
-            # Finding the opponent's TH level
-            Opponent_tags = member_info["bestOpponentAttack"]["attackerTag"]
-            for member in war_data[Opponent_clan_or_opponent]["members"]:
-                if member["tag"] == Opponent_tags:
-                    opponent_th_level = member["townhallLevel"]
-                    break
-            if debug_print_statements: print("Opponent TH level:", opponent_th_level, " Member TH level: ", member_th_level)
-            
-        else:
-            defense_stars = np.nan
-            defense_percentage = np.nan
-            defense_duration = np.nan
-            opponent_th_level = np.nan
-            if debug_print_statements:  print("No opponent attacks")
-
-        member_battleday_stats = {
-            "name": member_info["name"], 
-            "townHallLevel": member_th_level,
-            "attackStars": attack_stars,
-            "attackPercentage": attack_percentage,
-            "attackDuration": attack_duration,
-            "defenseStars": defense_stars,
-            "defensePercentage": defense_percentage,
-            "defenseDuration": defense_duration,
-            "opponentTHLevel": opponent_th_level,
-            # "season": war_data["season"]["id"],
-        }
-        # Adding the member's stats to the dataframe
-        Pussay_members_df.loc[len(Pussay_members_df)] = member_battleday_stats
-    return Pussay_members_df
+    return war_info_df, war_data["state"]
 
 def gather_season_data(season):
     """This function retrieves the war stats for a given season from the Clash of Clans API for the 'Pussay Palace' clan.
@@ -150,31 +235,46 @@ def gather_season_data(season):
 
     return base_df
 
-# Load the season data
-season_data = gather_season_data("2025-05")
-print(season_data.info())
 
-# Path to the combined database CSV
-db_filepath = os.path.join(os.path.dirname(__file__), "Seasons Data", "Pussay_season_database.csv")
+if __name__ == "__main__":
+    Pussay_wars_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv"))
+    if debug_print_statements:
+        print("Pussay war tags: \n", Pussay_wars_df)
 
-# Load existing database if it exists
-if os.path.exists(db_filepath):
-    all_seasons_df = pd.read_csv(db_filepath)
-else:
-    all_seasons_df = pd.DataFrame(columns=season_data.columns)
+    Pussay_warTags = Pussay_wars_df["wartag"]
 
-# Check if this season is already present and complete
-season_rows = all_seasons_df[all_seasons_df["season"] == season_data["season"][0]]
-if len(season_rows) < 15 * 7:
-    # Remove any partial/incomplete data for this season
-    all_seasons_df = all_seasons_df[all_seasons_df["season"] != season_data["season"][0]]
-    # Append the new season data
-    all_seasons_df = pd.concat([all_seasons_df, season_data], ignore_index=True)
-    # Save the updated database
-    all_seasons_df.to_csv(db_filepath, index=False)
-    print(f"Added/updated season {season_data['season'][0]} to database.")
-else:
-    print(f"Season {season_data['season'][0]} already complete in database.")
-# Save the season data to a CSV file
-save_filepath = os.path.join(os.path.dirname(__file__), f"Seasons Data\\Pussay_season_data_{season_data['season'][0]}.csv")
-season_data.to_csv(save_filepath, index=False)
+    #Finding the most recent war
+
+    # print(Pussay_warTags[16])
+    war_info_df, war_state  = get_war_stats(Pussay_warTags[0]) #"#8Q9208GJ0"
+    print(war_state)
+    # print(war_info_df.info())
+    # print(war_info_df[["defense_th_diff", "attacker_townhallLevel"]])
+# # Load the season data
+# season_data = gather_season_data("2025-10")
+# print(season_data.info())
+
+# # Path to the combined database CSV
+# db_filepath = os.path.join(os.path.dirname(__file__), "Seasons Data", "Pussay_season_database.csv")
+
+# # Load existing database if it exists
+# if os.path.exists(db_filepath):
+#     all_seasons_df = pd.read_csv(db_filepath)
+# else:
+#     all_seasons_df = pd.DataFrame(columns=season_data.columns)
+
+# # Check if this season is already present and complete
+# season_rows = all_seasons_df[all_seasons_df["season"] == season_data["season"][0]]
+# if len(season_rows) < 15 * 7:
+#     # Remove any partial/incomplete data for this season
+#     all_seasons_df = all_seasons_df[all_seasons_df["season"] != season_data["season"][0]]
+#     # Append the new season data
+#     all_seasons_df = pd.concat([all_seasons_df, season_data], ignore_index=True)
+#     # Save the updated database
+#     all_seasons_df.to_csv(db_filepath, index=False)
+#     print(f"Added/updated season {season_data['season'][0]} to database.")
+# else:
+#     print(f"Season {season_data['season'][0]} already complete in database.")
+# # Save the season data to a CSV file
+# save_filepath = os.path.join(os.path.dirname(__file__), f"Seasons Data\\Pussay_season_data_{season_data['season'][0]}.csv")
+# season_data.to_csv(save_filepath, index=False)
