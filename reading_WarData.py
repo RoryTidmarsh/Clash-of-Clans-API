@@ -206,7 +206,11 @@ def get_war_stats(battle_tag):
 
     # Store information in a dataframe
     war_info_df = pd.DataFrame([m.to_dataframe_row() for m in member_array])
-
+    # Add a 'season' column to the DataFrame if 'season' is available in war_data
+    season = war_data.get("season", None)
+    if season is not None:
+        war_info_df["season"] = season
+    
     return war_info_df, war_data["state"]
 
 class WarDataManager:
@@ -288,7 +292,7 @@ class WarDataManager:
         clean_tag = wartag.replace('#', '').replace('%23', '')
         return os.path.join(self.data_folder, f"war_{clean_tag}.csv")
     
-    def save_war_data(self, wartag, war_df, coc_war_status):
+    def save_war_data(self, wartag, war_df, coc_war_status, season=None, battleday=None):
         """
         Save war data and update status tracking
         
@@ -300,6 +304,12 @@ class WarDataManager:
         """
         # Only save war data if it's not empty
         if war_df is not None and not war_df.empty:
+            # Ensure season and battleday columns exist if provided
+            if season is not None and 'season' not in war_df.columns:
+                war_df['season'] = season
+            if battleday is not None and 'battleday' not in war_df.columns:
+                war_df['battleday'] = battleday
+
             data_path = self.get_war_data_path(wartag)
             war_df.to_csv(data_path, index=False)
         else:
@@ -321,8 +331,9 @@ class WarDataManager:
             'COC_war_status': coc_war_status,
             'loading_status': loading_status,
             'last_updated': current_time,
-            'data_file': data_path if data_path else ""
-
+            'data_file': data_path if data_path else "",
+            'season': season if season is not None else "",
+            'battleday': battleday if battleday is not None else ""
         }])
         
         self.status_df = pd.concat([self.status_df, new_row], ignore_index=True)
@@ -353,7 +364,7 @@ class WarDataManager:
             return pd.read_csv(data_path)
         return None
     
-    def process_war(self, wartag, get_war_stats_func, season=None, cwl_day=None):
+    def process_war(self, wartag, get_war_stats_func, season=None, battleday=None):
         """
         Process a single war - either load from cache or fetch from API
         
@@ -375,8 +386,8 @@ class WarDataManager:
                 war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
-                if cwl_day is not None and 'cwl_day' not in cached_data.columns:
-                    cached_data['cwl_day'] = cwl_day
+                if battleday is not None and 'battleday' not in cached_data.columns:
+                    cached_data['battleday'] = battleday
                 return cached_data, war_status['COC_war_status'], war_status['loading_status'], True
             
             # ✅ NO CACHE — means this war is permanently skipped
@@ -388,18 +399,20 @@ class WarDataManager:
         # Load from API
         try:
             war_df, coc_war_status = get_war_stats_func(wartag)
-            
+
             # Add season and cwl_day columns
             if season is not None:
                 war_df['season'] = season
-            if cwl_day is not None:
-                war_df['cwl_day'] = cwl_day
+            if battleday is not None:
+                war_df['battleday'] = battleday
+
+            war_df['wartag'] = wartag  # Add wartag to DataFrame
             
             # Determine loading status
             loading_status = self.determine_loading_status(coc_war_status)
             
-            # Save the data
-            self.save_war_data(wartag, war_df, coc_war_status)
+            # Save the data, ensuring season and battleday persist to file
+            self.save_war_data(wartag, war_df, coc_war_status, season=season, battleday=battleday)
             
             return war_df, coc_war_status, loading_status, False
             
@@ -411,7 +424,9 @@ class WarDataManager:
                 self.save_war_data(
                     wartag,
                     war_df=pd.DataFrame(),        # empty since no data
-                    coc_war_status="notInWar"     # mark as not available
+                    coc_war_status="notInWar",  # mark as not available
+                    season=season,
+                    battleday=battleday
                 )
                 return pd.DataFrame(), "notInWar", "Error - too old", False
 
@@ -424,8 +439,8 @@ class WarDataManager:
                 # Add season and cwl_day if not already present
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
-                if cwl_day is not None and 'cwl_day' not in cached_data.columns:
-                    cached_data['cwl_day'] = cwl_day
+                if battleday is not None and 'battleday' not in cached_data.columns:
+                    cached_data['battleday'] = battleday
                 return (
                     cached_data,
                     war_status['COC_war_status'],
@@ -501,8 +516,10 @@ if __name__ == "__main__":
         try:
             # Process the war (will use cache if completed)
             war_df, coc_status, loading_status, was_cached = war_manager.process_war(
-                wartag, 
-                get_war_stats  # Your existing function
+                wartag,
+                get_war_stats,  # Your existing function
+                season=season,
+                battleday=battleday
             )
             
             # Add metadata

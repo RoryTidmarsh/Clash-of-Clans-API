@@ -1,16 +1,16 @@
-tag,name,townhallLevel,mapPosition,attacker_townhallLevel,defender_townhallLevel,attack_th_diff,defense_th_diff,attack_stars,attack_percentage,attack_duration,defender_tag,defense_stars,defense_percentage,defense_duration,attacker_tag
-#P2RVRUQL,rougier,16,12,,,,,,,,,,,,
-#P8GU9VCC,4li506,17,4,,,,,,,,,,,,
-#JUL00PUJ,kilamanshum,16,5,,,,,,,,,,,,
-#VC2LQPQG,rozzledog 72,15,16,,,,,,,,,,,,
-#98PCR0LR,felix,15,15,,,,,,,,,,,,
-#LYCJ22LCC,conan_1014,17,11,,,,,,,,,,,,
-#QLLCQYPY,Harry The Great,16,7,,,,,,,,,,,,
-#9GPRUGVR,Vincendo79,16,8,,,,,,,,,,,,
-#P0LVPRPL,o12s,17,3,,,,,,,,,,,,
-#82CQ9GJ89,Fazzy,17,1,,,,,,,,,,,,
-#22G29C82C,CamV13,17,2,,,,,,,,,,,,
-#90Y82C8CU,Milesy,16,6,,,,,,,,,,,,
-#YYQ2J2YG,Tom the bomb,16,10,,,,,,,,,,,,
-#PPPQJP0V2,rcbc,16,9,,,,,,,,,,,,
-#LRQRU2J2U,gilo,15,14,,,,,,,,,,,,
+tag,name,townhallLevel,mapPosition,attacker_townhallLevel,defender_townhallLevel,attack_th_diff,defense_th_diff,attack_stars,attack_percentage,attack_duration,defender_tag,defense_stars,defense_percentage,defense_duration,attacker_tag,season,battleday,wartag
+#P2RVRUQL,rougier,16,12,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#P8GU9VCC,4li506,17,4,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#JUL00PUJ,kilamanshum,16,5,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#VC2LQPQG,rozzledog 72,15,16,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#98PCR0LR,felix,15,15,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#LYCJ22LCC,conan_1014,17,11,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#QLLCQYPY,Harry The Great,16,7,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#9GPRUGVR,Vincendo79,16,8,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#P0LVPRPL,o12s,17,3,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#82CQ9GJ89,Fazzy,17,1,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#22G29C82C,CamV13,17,2,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#90Y82C8CU,Milesy,16,6,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#YYQ2J2YG,Tom the bomb,16,10,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#PPPQJP0V2,rcbc,16,9,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
+#LRQRU2J2U,gilo,15,14,,,,,,,,,,,,,2025-10,5,#8Q9L9YR28
