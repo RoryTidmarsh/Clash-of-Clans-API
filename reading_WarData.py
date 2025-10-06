@@ -476,53 +476,6 @@ class WarDataManager:
         ]
         return "\n".join(lines)
 
-    
-
-def gather_season_data(season):
-    """This function retrieves the war stats for a given season from the Clash of Clans API for the 'Pussay Palace' clan.
-
-    Args:
-        season (string): The season to retrieve stats for.
-
-    Returns:
-        base_df (pd.DataFrame): A DataFrame containing the war stats for each member for each battle day of the 'Pussay Palace' clan for the given season.
-    """
-    # Creating a dataframe to store the battle day stats
-    base_df = pd.DataFrame(columns=["name", "townHallLevel", "attackStars", "attackPercentage", "attackDuration", "defenseStars", "defensePercentage", "defenseDuration", "opponentTHLevel", "battleday", "season"])
-
-    season_wars_df = Pussay_wars_df[Pussay_wars_df["season"] == season]
-    
-    # Loop through all the battle tags and get the stats for each day
-    for i in range(len(season_wars_df)):
-        battle_tag = season_wars_df["wartag"][i]
-        battle_day = season_wars_df["battleday"][i]
-        
-        battle_day_df = get_war_stats(battle_tag)
-        battle_day_df["battleday"] = battle_day
-        battle_day_df["season"] = season
-        
-        # Add the battle day and season to the dataframe
-        for _, row in battle_day_df.iterrows():
-            base_df.loc[len(base_df)] = row
-
-    return base_df
-
-
-# if __name__ == "__main__":
-#     Pussay_wars_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv"))
-#     if debug_print_statements:
-#         print("Pussay war tags: \n", Pussay_wars_df)
-
-#     Pussay_warTags = Pussay_wars_df["wartag"]
-#     print(Pussay_warTags)
-#     #Finding the most recent war
-
-#     # Load war data
-#     war_info_df, war_state  = get_war_stats(Pussay_warTags[17]) #"#8Q9208GJ0"
-
-#     print(war_info_df.info())
-
-# Example usage in your main code:
 if __name__ == "__main__":
     # Initialize the manager
     war_manager = WarDataManager(
@@ -584,33 +537,3 @@ if __name__ == "__main__":
         print(f"Total player records: {len(combined_df)}")
     else:
         print("No war data loaded.")
-
-
-# # Load the season data
-# season_data = gather_season_data("2025-10")
-# print(season_data.info())
-
-# # Path to the combined database CSV
-# db_filepath = os.path.join(os.path.dirname(__file__), "Seasons Data", "Pussay_season_database.csv")
-
-# # Load existing database if it exists
-# if os.path.exists(db_filepath):
-#     all_seasons_df = pd.read_csv(db_filepath)
-# else:
-#     all_seasons_df = pd.DataFrame(columns=season_data.columns)
-
-# # Check if this season is already present and complete
-# season_rows = all_seasons_df[all_seasons_df["season"] == season_data["season"][0]]
-# if len(season_rows) < 15 * 7:
-#     # Remove any partial/incomplete data for this season
-#     all_seasons_df = all_seasons_df[all_seasons_df["season"] != season_data["season"][0]]
-#     # Append the new season data
-#     all_seasons_df = pd.concat([all_seasons_df, season_data], ignore_index=True)
-#     # Save the updated database
-#     all_seasons_df.to_csv(db_filepath, index=False)
-#     print(f"Added/updated season {season_data['season'][0]} to database.")
-# else:
-#     print(f"Season {season_data['season'][0]} already complete in database.")
-# # Save the season data to a CSV file
-# save_filepath = os.path.join(os.path.dirname(__file__), f"Seasons Data\\Pussay_season_data_{season_data['season'][0]}.csv")
-# season_data.to_csv(save_filepath, index=False)
