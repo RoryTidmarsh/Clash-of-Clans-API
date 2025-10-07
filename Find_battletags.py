@@ -3,7 +3,7 @@ import numpy as np
 import requests
 from dotenv import load_dotenv
 import os
-from supabase_client import supabase # Import supabase client to load .env variables
+from supabase_client import supabase,store_battle_tag # Import supabase client to load .env variables
 # Load environment variables from .env file
 load_dotenv()
 url = os.getenv("SUPABASE_URL")
@@ -240,8 +240,8 @@ if __name__ == "__main__":
     # print("Reduced war tag DataFrame:")
     # print(reduced_warTag_df)
 
-    # Save the reduced battle tag DataFrame to a CSV file
-    save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
+    # # Save the reduced battle tag DataFrame to a CSV file
+    # save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
 
     # Check if the file already exists
     if os.path.exists(save_filepath):
@@ -249,10 +249,17 @@ if __name__ == "__main__":
     else:
         existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])# Else, create a new DataFrame
 
-    # Append the new data to the existing data
+    # Add new season to supabase battle_tags table
+    for row in reduced_warTag_df.itertuples():
+        if row.wartag != "#0": # Skip empty tags
+            print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
+            store_battle_tag(row.battleday, row.wartag, row.season)
+
+
+    # # Append the new data to the existing data
     new_pussay_data = append_days_to_dataframe(existing_pussay_data, reduced_warTag_df, season)
-    # Save the new data to the CSV file
+    # # Save the new data to the CSV file
     new_pussay_data.to_csv(save_filepath, index=False)
 
-    print("Reduced battle tag DataFrame tail:")
-    print(new_pussay_data.tail(7))
+    # print("Reduced battle tag DataFrame tail:")
+    # print(new_pussay_data.tail(7))
