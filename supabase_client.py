@@ -24,10 +24,10 @@ def get_battle_tags(SQL_query=None):
     response = supabase.table("battle_tags").select(SQL_query).execute()
     return response.data
 
-def store_war_status(wartag, coc_war_status, loading_status, last_updated, data_file=""):
+def store_war_status(wartag, COC_war_status, loading_status, last_updated, data_file=""):
     data = {
         "wartag": wartag,
-        "coc_war_status": coc_war_status,
+        "coc_war_status": COC_war_status,
         "loading_status": loading_status,
         "last_updated": last_updated,
         "data_file": data_file
