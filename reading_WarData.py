@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from supabase_client import supabase, update_war_status, store_war_data, store_war_status,get_battle_tags
+from supabase_client import supabase
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")
@@ -295,38 +295,36 @@ class WarDataManager:
             return "notLoaded"
         
     def save_war_data(self, wartag, war_df, coc_war_status, season, battleday):
-        """
-        Save war data and update status tracking
-        
-        Args:
-            wartag: The war tag
-            war_df: DataFrame containing war data
-            coc_war_status: Current status of the war from COC API 
-                           ('inWar', 'warEnded', 'preparation')
-        """
-        # Only save war data if it's not empty
-        if war_df is not None and not war_df.empty:
-            # Ensure season and battleday columns exist if provided
-            if season is not None and 'season' not in war_df.columns:
-                war_df['season'] = season
-            if battleday is not None and 'battleday' not in war_df.columns:
-                war_df['battleday'] = battleday
+        # Add metadata
+        war_df['wartag'] = wartag
+        war_df['season'] = season
+        war_df['battleday'] = battleday
 
-            data_path = self.get_war_data_path(wartag)
-            war_df.to_csv(data_path, index=False)
-        else:
-            # Mark as no data
-            data_path = None
-        
+        if war_df is not None and not war_df.empty:
+            records = war_df.to_dict(orient='records')
+            try:
+                # Upsert instead of insert
+                supabase.table("war_data").upsert(records).execute()
+            except Exception as e:
+                print(f"Error upserting war data to Supabase: {e}")
+
         # Determine loading status based on COC war status
         loading_status = self.determine_loading_status(coc_war_status)
-        
-        # Update status tracking
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        war_status_response = update_war_status(wartag, coc_war_status, loading_status, current_time, season, battleday)
-        print("War status update response: ", war_status_response)
-        
+
+        # Upsert war status
+        try:
+            supabase.table("war_status").upsert([{
+                "wartag": wartag,
+                "battleday": battleday,
+                "season": season,
+                "coc_war_status": coc_war_status,
+                "loading_status": loading_status,
+                "last_updated": current_time
+            }]).execute()
+        except Exception as e:
+            print(f"Error upserting war status to Supabase: {e}")
+
         status_symbol = "✓" if loading_status == "completed" else "⋯"
         if coc_war_status == "notInWar" or loading_status in ["Error - too old", "notLoaded"]:
             print(f"✗ Skipping war {wartag} | Marked as {coc_war_status} ({loading_status}) — will not reload again.")
