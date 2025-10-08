@@ -38,6 +38,22 @@ def get_war_status(SQL_query=None):
     response = supabase.table("war_status").select(SQL_query).execute()
     return response.data
 
+def update_war_status(wartag, coc_war_status, loading_status, last_updated, season = None, battleday = None):
+    # Prepare the fields to update
+    update_data = {
+        "COC_war_status": coc_war_status,
+        "loading_status": loading_status,
+        "last_updated": last_updated,
+        "season": season,
+        "battleday": battleday
+    }
+    # Use .update() and .eq() to target the correct row
+    response = supabase.table("war_status") \
+        .update(update_data) \
+        .eq("wartag", wartag) \
+        .execute()
+    return response
+
 def store_war_data(dataframe_row):
     if not isinstance(dataframe_row, dict):
         data = dataframe_row.to_dict()

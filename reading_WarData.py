@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from supabase_client import supabase, get_war_status, store_war_data, store_war_status,get_battle_tags
+from supabase_client import supabase, update_war_status, store_war_data, store_war_status,get_battle_tags
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")
@@ -226,8 +226,23 @@ class WarDataManager:
         
         # else:
         #     self.status_df = pd.DataFrame(columns=[
-        #         'wartag', 'COC_war_status', 'loading_status', 'last_updated', 'data_file'
+        #         'wartag', 'coc_war_status', 'loading_status', 'last_updated', 'data_file'
         #     ])
+    def get_war_status(self, wartag):
+        """
+        Get the war status for a specific war tag from Supabase
+        
+        Args:
+            wartag: The war tag to look up
+        Returns:
+            dict or None: War status record if found, None otherwise
+        """
+        war_status = supabase.table(self.status_table).select("*").eq("wartag", wartag).execute().data
+        if war_status:
+            return pd.DataFrame(war_status)
+        else:
+            return None
+
 
     def should_load_war(self, wartag):
         """
@@ -240,7 +255,7 @@ class WarDataManager:
             bool: True if war should be loaded, False if it can be skipped
         """
         # Check if war tag exists in status tracking
-        war_status = supabase.table(self.status_table).select("*").eq("wartag", wartag).execute().data
+        war_status = self.get_war_status(wartag)
         
         if war_status.empty:
             # War not tracked yet, should load
@@ -248,7 +263,7 @@ class WarDataManager:
             return True
         
         loading_status = war_status.iloc[0]['loading_status']
-        coc_status = war_status.iloc[0]['COC_war_status']
+        coc_status = war_status.iloc[0]['coc_war_status']
         
         # skip if loading_status is 'completed'
         if loading_status in ['completed', "Error - too old"]:
@@ -279,7 +294,7 @@ class WarDataManager:
             # This shouldn't normally happen, but default to notLoaded
             return "notLoaded"
         
-    def save_war_data(self, wartag, war_df, coc_war_status, season=None, battleday=None):
+    def save_war_data(self, wartag, war_df, coc_war_status, season, battleday):
         """
         Save war data and update status tracking
         
@@ -309,31 +324,14 @@ class WarDataManager:
         # Update status tracking
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Remove existing entry if present
-        self.status_df = self.status_df[self.status_df['wartag'] != wartag]
-        
-        # Add new entry
-        new_row = pd.DataFrame([{
-            'wartag': wartag,
-            'COC_war_status': coc_war_status,
-            'loading_status': loading_status,
-            'last_updated': current_time,
-            'data_file': data_path if data_path else "",
-            'season': season if season is not None else "",
-            'battleday': battleday if battleday is not None else ""
-        }])
-        
-        self.status_df = pd.concat([self.status_df, new_row], ignore_index=True)
-        
-        # Save status file
-        self.status_df.to_csv(self.status_file_path, index=False)
+        war_status_response = update_war_status(wartag, coc_war_status, loading_status, current_time, season, battleday)
+        print("War status update response: ", war_status_response)
         
         status_symbol = "✓" if loading_status == "completed" else "⋯"
         if coc_war_status == "notInWar" or loading_status in ["Error - too old", "notLoaded"]:
             print(f"✗ Skipping war {wartag} | Marked as {coc_war_status} ({loading_status}) — will not reload again.")
         else:
-            print(f"⋯ Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
-        # print(f"{status_symbol} Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
+            print(f"{status_symbol} Saved war {wartag} | COC war status:{coc_war_status} | Loading: {loading_status}")
 
     def load_cached_war_data(self, wartag):
         """
@@ -372,17 +370,17 @@ class WarDataManager:
             # Try cache — but if none, just return immediately and do NOT call API
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
-                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                war_status = self.get_war_status(wartag)
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
                 if battleday is not None and 'battleday' not in cached_data.columns:
                     cached_data['battleday'] = battleday
-                return cached_data, war_status['COC_war_status'], war_status['loading_status'], True
+                return cached_data, war_status['coc_war_status'], war_status['loading_status'], True
             
             # ✅ NO CACHE — means this war is permanently skipped
-            war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+            war_status = self.get_war_stats(wartag)
             print(f"⚠ No cached data for {wartag} — but it's marked as '{war_status['loading_status']}'. Skipping API call.")
-            return pd.DataFrame(), war_status['COC_war_status'], war_status['loading_status'], False
+            return pd.DataFrame(), war_status['coc_war_status'], war_status['loading_status'], False
 
         
         # Load from API
@@ -400,7 +398,7 @@ class WarDataManager:
             # Determine loading status
             loading_status = self.determine_loading_status(coc_war_status)
             
-            # Save the data, ensuring season and battleday persist to file
+            # Save the data, ensuring season and battleday persist to table
             self.save_war_data(wartag, war_df, coc_war_status, season=season, battleday=battleday)
             
             return war_df, coc_war_status, loading_status, False
@@ -424,7 +422,7 @@ class WarDataManager:
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
                 print(f"⚠ Returning cached data for {wartag} due to API error")
-                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                war_status = self.get_war_status(wartag)
                 # Add season and cwl_day if not already present
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
@@ -432,7 +430,7 @@ class WarDataManager:
                     cached_data['battleday'] = battleday
                 return (
                     cached_data,
-                    war_status['COC_war_status'],
+                    war_status['coc_war_status'],
                     war_status['loading_status'],
                     True
                 )
@@ -445,7 +443,12 @@ class WarDataManager:
         Returns:
             dict: Summary statistics
         """
-        if self.status_df.empty:
+        # Load the latest status data from Supabase
+        war_status_data = supabase.table(self.status_table).select("*").execute().data
+        status_df = pd.DataFrame(war_status_data) if war_status_data else pd.DataFrame(columns=[
+            'wartag', 'coc_war_status', 'loading_status', 'last_updated', 'data_file'
+        ])
+        if status_df.empty:
             return {
                 'total_wars': 0,
                 'completed': 0,
@@ -454,11 +457,11 @@ class WarDataManager:
             }
         
         return {
-            'total_wars': len(self.status_df),
-            'completed': len(self.status_df[self.status_df['loading_status'] == 'completed']),
-            'in_progress': len(self.status_df[self.status_df['loading_status'] == 'inProgress']),
-            'not_loaded': len(self.status_df[self.status_df['loading_status'].isin(['notLoaded'])]),
-            'too_old': len(self.status_df[self.status_df['loading_status'] == 'Error - too old'])
+            'total_wars': len(status_df),
+            'completed': len(status_df[status_df['loading_status'] == 'completed']),
+            'in_progress': len(status_df[status_df['loading_status'] == 'inProgress']),
+            'not_loaded': len(status_df[status_df['loading_status'].isin(['notLoaded'])]),
+            'too_old': len(status_df[status_df['loading_status'] == 'Error - too old'])
         }
     
     def __repr__(self):
