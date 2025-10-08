@@ -38,22 +38,53 @@ def get_war_status(SQL_query=None):
     response = supabase.table("war_status").select(SQL_query).execute()
     return response.data
 
-def update_war_status(wartag, coc_war_status, loading_status, last_updated, season = None, battleday = None):
-    # Prepare the fields to update
-    update_data = {
-        "COC_war_status": coc_war_status,
-        "loading_status": loading_status,
-        "last_updated": last_updated,
-        "season": season,
-        "battleday": battleday
-    }
-    # Use .update() and .eq() to target the correct row
-    response = supabase.table("war_status") \
-        .update(update_data) \
-        .eq("wartag", wartag) \
-        .execute()
-    return response
+def _sanitize_value(v):
+    if v is None:
+        return None
+    if isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
+        return None
+    return v
 
+def _sanitize_row(d: dict):
+    return {k: _sanitize_value(v) for k, v in d.items()}
+
+def get_war_status(wartag=None, SQL_query="*"):
+    """
+    If wartag provided, return list of matching records (usually single dict) else run select(SQL_query).
+    """
+    if wartag:
+        response = supabase.table("war_status").select("*").eq("wartag", wartag).execute()
+    else:
+        response = supabase.table("war_status").select(SQL_query).execute()
+    return response.data
+
+def update_war_status(wartag, coc_war_status, loading_status, last_updated, season=None, battleday=None, data_file=None):
+    """
+    Try to update an existing war_status row by wartag. If no row updated, insert a new one.
+    Sanitizes NaN/inf -> None so JSON serialization won't fail.
+    Returns inserted/updated row data (response.data) or raises on API error.
+    """
+    update_data = {
+        "wartag": wartag,
+        "coc_war_status": coc_war_status,
+        "loading_status": loading_status,
+        "last_updated": last_updated
+        # "data_file": data_file
+    }
+
+    sanitized = _sanitize_row(update_data)
+
+    try:
+        # Try update first (won't create new row)
+        res = supabase.table("war_status").update(sanitized).eq("wartag", wartag).execute()
+        # If update returned no rows, insert instead
+        if not res.data:
+            res2 = supabase.table("war_status").insert(sanitized).execute()
+            return res2.data
+        return res.data
+    except Exception as e:
+        print(f"Error updating/inserting war_status for {wartag}: {e}")
+        raise
 def store_war_data(dataframe_row):
     if not isinstance(dataframe_row, dict):
         data = dataframe_row.to_dict()

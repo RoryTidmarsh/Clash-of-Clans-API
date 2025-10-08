@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from supabase_client import supabase
+from supabase_client import supabase, update_war_status
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")
@@ -201,7 +201,7 @@ def get_war_stats(battle_tag):
         clan_member.find_attacker_TH_level(war_data[Opponent_clan_or_opponent])
 
         member_array.append(clan_member)
-        print(clan_member)
+        # print(clan_member)
     assert len(member_array) == len(war_data[Pussay_clan_or_opponent]["members"])
 
     # Store information in a dataframe
@@ -223,11 +223,6 @@ class WarDataManager:
         """
         self.status_table = status_table
         
-        
-        # else:
-        #     self.status_df = pd.DataFrame(columns=[
-        #         'wartag', 'coc_war_status', 'loading_status', 'last_updated', 'data_file'
-        #     ])
     def get_war_status(self, wartag):
         """
         Get the war status for a specific war tag from Supabase
@@ -243,7 +238,6 @@ class WarDataManager:
         else:
             return None
 
-
     def should_load_war(self, wartag):
         """
         Check if a war should be loaded from the API
@@ -257,7 +251,7 @@ class WarDataManager:
         # Check if war tag exists in status tracking
         war_status = self.get_war_status(wartag)
         
-        if war_status.empty:
+        if war_status is None or war_status.empty:
             # War not tracked yet, should load
             print(f"War {wartag} not tracked yet. Will load.")
             return True
@@ -301,12 +295,37 @@ class WarDataManager:
         war_df['battleday'] = battleday
 
         if war_df is not None and not war_df.empty:
-            records = war_df.to_dict(orient='records')
-            try:
-                # Upsert instead of insert
-                supabase.table("war_data").upsert(records).execute()
-            except Exception as e:
-                print(f"Error upserting war data to Supabase: {e}")
+            clean_df = war_df.replace([np.inf, -np.inf], None)
+            clean_df = clean_df.map(lambda x: None if pd.isnull(x) else x)
+
+            records = clean_df.to_dict(orient='records')
+            for record in records:
+                try:
+                    # Check if the row exists (by wartag and tag)
+                    query = supabase.table("war_data") \
+                        .select("wartag,tag") \
+                        .eq("wartag", record["wartag"]) \
+                        .eq("tag", record["tag"]) \
+                        .execute()
+                    exists = query.data and len(query.data) > 0
+
+                    if not exists:
+                        print(f"Inserted new war data for {record['tag']} in war {record['wartag']}")
+                        # Insert new row
+                        supabase.table("war_data").insert(record).execute()
+                        
+                    else:
+                        print(f"Updated war data for {record['tag']} in war {record['wartag']}")
+                        # Update existing row
+                        response = supabase.table("war_data") \
+                            .update(record) \
+                            .eq("wartag", record["wartag"]) \
+                            .eq("tag", record["tag"]) \
+                            .execute()
+
+                except Exception as e:
+                    raise ValueError(f"Error upserting war data to Supabase: {e}")
+                
 
         # Determine loading status based on COC war status
         loading_status = self.determine_loading_status(coc_war_status)
@@ -314,14 +333,25 @@ class WarDataManager:
 
         # Upsert war status
         try:
-            supabase.table("war_status").upsert([{
+            # Check if war_status row exists
+            status_query = supabase.table("war_status") \
+                .select("id") \
+                .eq("wartag", wartag) \
+                .execute()
+            status_exists = status_query.data and len(status_query.data) > 0
+
+            war_status_record = {
                 "wartag": wartag,
-                "battleday": battleday,
-                "season": season,
                 "coc_war_status": coc_war_status,
                 "loading_status": loading_status,
                 "last_updated": current_time
-            }]).execute()
+            }
+
+            if not status_exists:
+                result = supabase.table("war_status").insert(war_status_record).execute()
+            else:
+                result = supabase.table("war_status").update(war_status_record).eq("wartag", wartag).execute()
+
         except Exception as e:
             print(f"Error upserting war status to Supabase: {e}")
 
@@ -349,7 +379,7 @@ class WarDataManager:
         else:
             return None
     
-    def process_war(self, wartag, get_war_stats_func, season=None, battleday=None):
+    def process_war(self, wartag, get_war_stats_func, season=None,   battleday=None):
         """
         Process a single war - either load from cache or fetch from API
         
@@ -376,7 +406,7 @@ class WarDataManager:
                 return cached_data, war_status['coc_war_status'], war_status['loading_status'], True
             
             # ✅ NO CACHE — means this war is permanently skipped
-            war_status = self.get_war_stats(wartag)
+            war_status = self.get_war_status(wartag)
             print(f"⚠ No cached data for {wartag} — but it's marked as '{war_status['loading_status']}'. Skipping API call.")
             return pd.DataFrame(), war_status['coc_war_status'], war_status['loading_status'], False
 
@@ -481,13 +511,13 @@ class WarDataManager:
 if __name__ == "__main__":
     # Initialize the manager
     war_manager = WarDataManager(
-        status_file_path="war_status.csv",
-        data_folder="war_data"
+        status_table="war_status"
     )
     
-    # Load your battle tags CSV
-    Pussay_wars_df = pd.read_csv("Pussay_battle_tags.csv")
-    
+    # Load your battle tags from supabase
+    Pussay_wars = supabase.table("battle_tags").select("*").execute().data
+    Pussay_wars_df = pd.DataFrame(Pussay_wars)
+
     # Process each war
     all_wars_data = []
     
@@ -507,7 +537,7 @@ if __name__ == "__main__":
             # Process the war (will use cache if completed)
             war_df, coc_status, loading_status, was_cached = war_manager.process_war(
                 wartag,
-                get_war_stats,  # Your existing function
+                get_war_stats,  # Your existing code
                 season=season,
                 battleday=battleday
             )
@@ -533,11 +563,3 @@ if __name__ == "__main__":
     
     # Print summary
     print(war_manager)
-    
-    # Combine all wars into single DataFrame
-    if all_wars_data:
-        combined_df = pd.concat(all_wars_data, ignore_index=True)
-        print(f"Successfully loaded {len(all_wars_data)} wars")
-        print(f"Total player records: {len(combined_df)}")
-    else:
-        print("No war data loaded.")
