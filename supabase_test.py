@@ -19,7 +19,7 @@ def battle_tags_to_supabase(filepath = "Pussay_battle_tags.csv"):
     for row in df.itertuples():
         if row.wartag != "#0": # Skip empty tags
             # Check if the battle tag already exists in the database for any day or season
-            existing_tags = supabase.table("battle_tags").select("*").eq("wartag", row.wartag).execute()
+            existing_tags = supabase.table("battle_tags").select("*").eq("wartag", row.wartag).eq("season", row.season).eq("battleday", row.battleday).execute()
             if existing_tags.data:
                 print(f"Battle tag {row.wartag} already exists in the database. Skipping insertion.")
             else:
@@ -50,6 +50,6 @@ def war_status_to_supabase(filepath = "war_status.csv"):
                 
 if __name__ == "__main__":
     
-    # battle_tags_to_supabase()  # Call the function with the default filepath
-    war_status_to_supabase()  # Call the function with the default filepath
+    battle_tags_to_supabase()  # Call the function with the default filepath
+    # war_status_to_supabase()  # Call the function with the default filepath
     

@@ -215,31 +215,30 @@ def wars_with_clan(battle_tags):
 
     return clan_war_tags, clan_war_states
 
-if __name__ == "__main__":
-    # Get the battle tags for the current war league
-    seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
-    print("seasonal battle tag df: ", seasonal_battle_tag_df)
+def Update_Supabase_battle_tags(reduced_warTag_df):
+    """Update the Supabase battle_tags table with new battle tags.
 
-    # Save the battle tag DataFrame to a CSV file
-    save_filepath = os.path.join(os.path.dirname(__file__), "battle_tags.csv")
-    existing_data = pd.read_csv(save_filepath)
-    newdata = append_days_to_dataframe(existing_data, seasonal_battle_tag_df, season)
-    newdata.to_csv(save_filepath, index=False)
+    Args:
+        reduced_warTag_df (pd.DataFrame): DataFrame containing the battle tags to add to the database
+    """
+    # Checking for neccessary columns
+    required_columns = ["battleday", "wartag", "season"]
+    for col in required_columns:
+        if col not in reduced_warTag_df.columns:
+            raise ValueError(f"Error: Missing required column '{col}' in the DataFrame.")
+    
+    for row in reduced_warTag_df.itertuples():
+        if row.wartag != "#0": # Skip empty tags
+            # Check if the battle tag already exists in the database for the same day or season
+            existing_tags = supabase.table("battle_tags").select("*").eq("wartag", row.wartag).eq("season", row.season).eq("battleday", row.battleday).execute()
+            
+            if existing_tags.data:
+                print(f"Battle tag {row.wartag} already exists in the database. Skipping insertion.")
+            else:
+                print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
+                store_battle_tag(row.battleday, row.wartag, row.season)
 
-    # Print the DataFrame
-    print("Battle tag DataFrame:")
-    print(newdata.tail(8))
-
-    # Find which wars the clan is in
-    clan_war_tags,clan_war_states = wars_with_clan(seasonal_battle_tag_df)    
-    print("Clan war tags for the week:", clan_war_tags)
-    # Create a reduced DataFrame with only the war tags containing the clan, columns: battleday, wartag, season
-    reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
-    for day, tag in clan_war_tags.items():
-        reduced_warTag_df = pd.concat([reduced_warTag_df, pd.DataFrame({"battleday": [day], "wartag": [tag], "season": [season]})], ignore_index=True)
-    # print("Reduced war tag DataFrame:")
-    # print(reduced_warTag_df)
-
+def save_csv_battle_tags(existing_pussay_data, reduced_warTag_df, season):
     # # Save the reduced battle tag DataFrame to a CSV file
     save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
 
@@ -247,19 +246,27 @@ if __name__ == "__main__":
     if os.path.exists(save_filepath):
         existing_pussay_data = pd.read_csv(save_filepath) # If it exists, load the existing data and append the new data
     else:
-        existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])# Else, create a new DataFrame
-
-    # Add new season to supabase battle_tags table
-    # for row in reduced_warTag_df.itertuples():
-    #     if row.wartag != "#0": # Skip empty tags
-    #         print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
-    #         store_battle_tag(row.battleday, row.wartag, row.season)
-
+        existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])# Else, create a new DataFrame with the correct columns
 
     # # Append the new data to the existing data
     new_pussay_data = append_days_to_dataframe(existing_pussay_data, reduced_warTag_df, season)
     # # Save the new data to the CSV file
     new_pussay_data.to_csv(save_filepath, index=False)
+    
 
-    # print("Reduced battle tag DataFrame tail:")
-    # print(new_pussay_data.tail(7))
+if __name__ == "__main__":
+    # Get the battle tags for the current war league
+    seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
+    print("seasonal battle tag df: ", seasonal_battle_tag_df)
+
+    # Find which wars the clan is in
+    clan_war_tags,clan_war_states = wars_with_clan(seasonal_battle_tag_df)    
+    print("Clan war tags for the week:", clan_war_tags)
+
+    # Create a reduced DataFrame with only the war tags containing the clan, columns: battleday, wartag, season
+    reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
+    for day, tag in clan_war_tags.items():
+        reduced_warTag_df = pd.concat([reduced_warTag_df, pd.DataFrame({"battleday": [day], "wartag": [tag], "season": [season]})], ignore_index=True)
+    
+    # Save to Supabase battle_tags table
+    Update_Supabase_battle_tags(reduced_warTag_df)
