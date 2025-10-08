@@ -16,5 +16,7 @@ wartag,COC_war_status,loading_status,last_updated,data_file,season,battleday
 #8Q8J9Y0UU,warEnded,completed,2025-10-06 19:21:52,war_data\war_8Q8J9Y0UU.csv,2025-10,1.0
 #8Q8UPG89J,warEnded,completed,2025-10-06 19:21:52,war_data\war_8Q8UPG89J.csv,2025-10,2.0
 #8Q9208GJ0,warEnded,completed,2025-10-06 19:21:53,war_data\war_8Q9208GJ0.csv,2025-10,3.0
-#8Q99G8VGG,inWar,inProgress,2025-10-06 19:21:53,war_data\war_8Q99G8VGG.csv,2025-10,4.0
-#8Q9L9YR28,preparation,inProgress,2025-10-06 19:21:53,war_data\war_8Q9L9YR28.csv,2025-10,5.0
+#8Q99G8VGG,warEnded,completed,2025-10-08 07:19:27,war_data\war_8Q99G8VGG.csv,2025-10,4.0
+#8Q9L9YR28,warEnded,completed,2025-10-08 07:19:28,war_data\war_8Q9L9YR28.csv,2025-10,5.0
+#8Q9GCPVGG,inWar,inProgress,2025-10-08 07:19:28,war_data\war_8Q9GCPVGG.csv,2025-10,6.0
+#8Q9CGLRU0,preparation,inProgress,2025-10-08 07:19:29,war_data\war_8Q9CGLRU0.csv,2025-10,7.0

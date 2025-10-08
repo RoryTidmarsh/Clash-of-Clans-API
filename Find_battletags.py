@@ -241,7 +241,7 @@ if __name__ == "__main__":
     # print(reduced_warTag_df)
 
     # # Save the reduced battle tag DataFrame to a CSV file
-    # save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
+    save_filepath = os.path.join(os.path.dirname(__file__), "Pussay_battle_tags.csv")
 
     # Check if the file already exists
     if os.path.exists(save_filepath):
@@ -250,10 +250,10 @@ if __name__ == "__main__":
         existing_pussay_data = pd.DataFrame(columns=["battleday", "wartag", "season"])# Else, create a new DataFrame
 
     # Add new season to supabase battle_tags table
-    for row in reduced_warTag_df.itertuples():
-        if row.wartag != "#0": # Skip empty tags
-            print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
-            store_battle_tag(row.battleday, row.wartag, row.season)
+    # for row in reduced_warTag_df.itertuples():
+    #     if row.wartag != "#0": # Skip empty tags
+    #         print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
+    #         store_battle_tag(row.battleday, row.wartag, row.season)
 
 
     # # Append the new data to the existing data
