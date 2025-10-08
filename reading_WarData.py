@@ -34,7 +34,27 @@ response_codes = {
     500: "Server error. Something is wrong on Clash of Clans side.",
     503: "Server is down for maintenance.",
 }
-
+WAR_DATA_SCHEMA = {
+    'tag': str,
+    'name': str,
+    'townhallLevel': int,
+    'mapPosition': int,
+    'attacker_townhallLevel': int,
+    'defender_townhallLevel': int,
+    'attack_th_diff': int,
+    'defense_th_diff': int,
+    'attack_stars': int,
+    'attack_percentage': int,
+    'attack_duration': int,
+    'defender_tag': str,
+    'defense_stars': int,
+    'defense_percentage': int,
+    'defense_duration': int,
+    'attacker_tag': str,
+    'season': str,
+    'battleday': int,
+    'wartag': str
+}
 class member():
     def __init__(self, member_json):
         self.tag = member_json["tag"]
@@ -128,21 +148,43 @@ class member():
         return {
             'tag': self.tag,
             'name': self.name,
-            'townhallLevel': self.townhallLevel,
-            'mapPosition': self.mapPosistion,
-            'attacker_townhallLevel': self.attacker_townhallLevel,
-            'defender_townhallLevel': self.defender_townhallLevel,
-            'attack_th_diff': self.attack_th_diff,  # Positive means attacked higher TH
-            'defense_th_diff': self.defense_th_diff,  # Positive means defended against higher TH
-            'attack_stars': self.attack_stars,
-            'attack_percentage': self.attack_percentage,
-            'attack_duration': self.attack_duration,
+            'townhallLevel': self._to_int(self.townhallLevel),
+            'mapPosition': self._to_int(self.mapPosistion),
+            'attacker_townhallLevel': self._to_int(self.attacker_townhallLevel),
+            'defender_townhallLevel': self._to_int(self.defender_townhallLevel),
+            'attack_th_diff': self._to_int(self.attack_th_diff),  # Positive means attacked higher TH
+            'defense_th_diff': self._to_int(self.defense_th_diff),  # Positive means defended against higher TH
+            'attack_stars': self._to_int(self.attack_stars),
+            'attack_percentage': self._to_int(self.attack_percentage),
+            'attack_duration': self._to_int(self.attack_duration),
             'defender_tag': self.defender_tag,
-            'defense_stars': self.defense_stars,
-            'defense_percentage': self.defense_percentage,
-            'defense_duration': self.defense_duration,
+            'defense_stars': self._to_int(self.defense_stars),
+            'defense_percentage': self._to_int(self.defense_percentage),
+            'defense_duration': self._to_int(self.defense_duration),
             'attacker_tag': self.attacker_tag
         }
+    def _to_int(self, value):
+        import numpy as np
+
+        # Handle None and "nan" (string)
+        if value is None:
+            return None
+        if isinstance(value, float) and np.isnan(value):
+            return None
+        if isinstance(value, str):
+            val_strip = value.strip("'\"").strip().lower()
+            if val_strip == "nan":
+                return None
+            try:
+                return int(float(val_strip))
+            except Exception:
+                print(f"Warning: Could not convert string value '{value}' to int.")
+                return None
+        try:
+            return int(value)
+        except Exception:
+            print(f"Warning: Could not convert value '{value}' of type '{type(value)}' to int.")
+            return None
                
 def get_war_stats(battle_tag):
     """This function retrieves the war stats for a given battle tag from the Clash of Clans API for the 'Pussay Palace' clan.
@@ -226,44 +268,45 @@ class WarDataManager:
     def get_war_status(self, wartag):
         """
         Get the war status for a specific war tag from Supabase
-        
+
         Args:
             wartag: The war tag to look up
         Returns:
             dict or None: War status record if found, None otherwise
         """
         war_status = supabase.table(self.status_table).select("*").eq("wartag", wartag).execute().data
-        if war_status:
-            return pd.DataFrame(war_status)
+        if war_status and len(war_status) > 0:
+            # return single record as dict (not a DataFrame) so callers get scalars
+            return war_status[0]
         else:
             return None
 
     def should_load_war(self, wartag):
         """
         Check if a war should be loaded from the API
-        
+
         Args:
             wartag: The war tag to check
-            
+
         Returns:
             bool: True if war should be loaded, False if it can be skipped
         """
         # Check if war tag exists in status tracking
         war_status = self.get_war_status(wartag)
-        
-        if war_status is None or war_status.empty:
+
+        if war_status is None:
             # War not tracked yet, should load
             print(f"War {wartag} not tracked yet. Will load.")
             return True
-        
-        loading_status = war_status.iloc[0]['loading_status']
-        coc_status = war_status.iloc[0]['coc_war_status']
-        
+
+        loading_status = war_status.get('loading_status')
+        coc_status = war_status.get('coc_war_status')
+
         # skip if loading_status is 'completed'
         if loading_status in ['completed', "Error - too old"]:
             print(f"War {wartag} already marked as '{loading_status}' (COC status: {coc_status}). Skipping.")
             return False
-        
+
         # Reload if 'notLoaded' or 'inProgress'
         print(f"War {wartag} loading status: {loading_status}, COC status: {coc_status}. Will reload.")
         return True
@@ -288,10 +331,38 @@ class WarDataManager:
             # This shouldn't normally happen, but default to notLoaded
             return "notLoaded"
         
+    def clean_record_for_supabase(self, record, schema=WAR_DATA_SCHEMA):
+        cleaned = {}
+        for key, dtype in schema.items():
+            val = record.get(key)
+            if dtype is int:
+                try:
+                    # Handle None, np.nan, and string 'nan'
+                    if val is None:
+                        cleaned[key] = None
+                    elif isinstance(val, float) and (np.isnan(val) or str(val).lower() == "nan"):
+                        cleaned[key] = None
+                    elif isinstance(val, str) and val.strip().lower() == "nan":
+                        cleaned[key] = None
+                    else:
+                        cleaned[key] = int(float(val))
+                except Exception:
+                    cleaned[key] = None
+            elif dtype is str:
+                # Handle None and clean up strings
+                if val is None:
+                    cleaned[key] = None
+                else:
+                    cleaned[key] = str(val).strip()
+            else:
+                cleaned[key] = val
+        return cleaned
+    
     def save_war_data(self, wartag, war_df, coc_war_status, season, battleday):
         # Add metadata
         war_df['wartag'] = wartag
         war_df['season'] = season
+        battleday = int(battleday) if battleday is not None else None
         war_df['battleday'] = battleday
 
         if war_df is not None and not war_df.empty:
@@ -300,6 +371,7 @@ class WarDataManager:
 
             records = clean_df.to_dict(orient='records')
             for record in records:
+                record = self.clean_record_for_supabase(record)
                 try:
                     # Check if the row exists (by wartag and tag)
                     query = supabase.table("war_data") \
@@ -324,6 +396,7 @@ class WarDataManager:
                             .execute()
 
                 except Exception as e:
+                    print(record)
                     raise ValueError(f"Error upserting war data to Supabase: {e}")
                 
 
