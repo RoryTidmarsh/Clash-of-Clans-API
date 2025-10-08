@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from supabase_client import supabase
+from supabase_client import supabase, get_war_status, store_war_data, store_war_status,get_battle_tags
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")
@@ -214,27 +214,20 @@ def get_war_stats(battle_tag):
     return war_info_df, war_data["state"]
 
 class WarDataManager:
-    def __init__(self, status_file_path="war_status.csv", data_folder="war_data"):
+    def __init__(self, status_table="war_status"):
         """
         Initialize the War Data Manager
         
         Args:
-            status_file_path: Path to CSV tracking war status
-            data_folder: Folder where individual war data files are stored
+            status_table: Table in Supabase tracking war status
         """
-        self.status_file_path = status_file_path
-        self.data_folder = data_folder
+        self.status_table = status_table
         
-        # Create data folder if it doesn't exist
-        os.makedirs(data_folder, exist_ok=True)
         
-        # Load or create status tracking file
-        if os.path.exists(status_file_path):
-            self.status_df = pd.read_csv(status_file_path)
-        else:
-            self.status_df = pd.DataFrame(columns=[
-                'wartag', 'COC_war_status', 'loading_status', 'last_updated', 'data_file'
-            ])
+        # else:
+        #     self.status_df = pd.DataFrame(columns=[
+        #         'wartag', 'COC_war_status', 'loading_status', 'last_updated', 'data_file'
+        #     ])
 
     def should_load_war(self, wartag):
         """
@@ -247,7 +240,7 @@ class WarDataManager:
             bool: True if war should be loaded, False if it can be skipped
         """
         # Check if war tag exists in status tracking
-        war_status = self.status_df[self.status_df['wartag'] == wartag]
+        war_status = supabase.table(self.status_table).select("*").eq("wartag", wartag).execute().data
         
         if war_status.empty:
             # War not tracked yet, should load
@@ -286,12 +279,6 @@ class WarDataManager:
             # This shouldn't normally happen, but default to notLoaded
             return "notLoaded"
         
-    def get_war_data_path(self, wartag):
-        """Generate file path for storing war data"""
-        # Clean the wartag for use in filename
-        clean_tag = wartag.replace('#', '').replace('%23', '')
-        return os.path.join(self.data_folder, f"war_{clean_tag}.csv")
-    
     def save_war_data(self, wartag, war_df, coc_war_status, season=None, battleday=None):
         """
         Save war data and update status tracking
@@ -358,11 +345,13 @@ class WarDataManager:
         Returns:
             pd.DataFrame or None: War data if available, None otherwise
         """
-        data_path = self.get_war_data_path(wartag)
         
-        if os.path.exists(data_path):
-            return pd.read_csv(data_path)
-        return None
+        # Load specific war data from supabase "war_data" table
+        war_data = supabase.table("war_data").select("*").eq("wartag", wartag).execute().data
+        if war_data:
+            return pd.DataFrame(war_data)
+        else:
+            return None
     
     def process_war(self, wartag, get_war_stats_func, season=None, battleday=None):
         """
