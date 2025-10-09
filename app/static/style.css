@@ -1,0 +1,90 @@
+/* --- Background styling --- */
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    /* Default background image, will be overridden by JS */
+    background: url('/static/images/hog rider 1.webp') no-repeat center center fixed;
+    background-size: cover;
+    transition: background-image 0.5s ease-in-out;
+}
+
+/* --- Translucent data box --- */
+.main-data-box {
+    background: rgba(255, 255, 255, 0.80); /* semi-translucent white */
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, .37);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 32px;
+    margin-top: 32px;
+    margin: 40px auto;
+    max-width: 950px;
+}
+
+/* --- Table styling --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #ccc;
+}
+
+th {
+    background: rgba(21, 101, 192, 0.1);
+    font-weight: bold;
+}
+
+/* --- Header and nav styling --- */
+header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 0 24px 0;
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.logo-container {
+    height: 64px;
+    width: 64px;
+    margin-left: 16px;
+}
+
+nav.nav-tabs {
+    margin-top: 8px;
+}
+
+.nav-tabs a {
+    margin-right: 24px;
+    font-size: 1.1em;
+    color: #1565c0;
+    text-decoration: none;
+}
+
+.nav-tabs a:hover {
+    text-decoration: underline;
+}
+
+/* --- Responsive adjustments --- */
+@media (max-width: 700px) {
+    .main-data-box {
+        padding: 16px;
+        max-width: 98vw;
+    }
+    .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

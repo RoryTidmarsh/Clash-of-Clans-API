@@ -26,6 +26,7 @@ Clash-of-Clans-API/
 │   │   ├── graphs.html         # Graphs/visuals
 │   │   └── ...                 # Other pages
 │   ├── static/                 # Static files (CSS, JS, images)
+│   │   ├── images/             # Any images used
 │   │   ├── style.css           # Stylesheets
 │   │   ├── graphs.js           # JS for charts
 │   │   └── ...                 # Additional static assets
