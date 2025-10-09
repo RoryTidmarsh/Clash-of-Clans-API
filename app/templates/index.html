@@ -1,106 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clan War League Stats - Pussay Palace</title>
-    <link rel="icon" type="image/png" href="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../static/style.css">
-</head>
-<body>
-    <div class="site-header">
-        <img class="site-logo" src="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png" alt="Clan Logo">
-        <span class="site-title">Clan War Progress - Pussay Palace</span>
-        <button class="refresh-btn pastel-red-title .pastel-red-title:hover" onclick="location.reload()">
-            &#x21bb; Refresh Data
-        </button>
-    </div>
-    <div class="nav-bar">
-        <nav>
-            <a href="{{ url_for('main.index') }}">Home</a>
-            <a href="{{ url_for('main.war_table') }}">Full War Table</a>
-            <a href="{{ url_for('main.progress_graphs') }}">Progress Graphs</a>
-        </nav>
-    </div>
-    <main>
-        <div class="main-data-box">
-            <!-- Filters section -->
-            <section id="filters">
-                <form method="get" action="{{ url_for('main.index') }}">
-                    <label for="season">Season:</label>
-                    <select name="season" id="season">
-                        {% for season in filters.seasons %}
-                        <option value="{{ season }}" {% if filters.selected_season == season %}selected{% endif %}>{{ season }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="player">Player:</label>
-                    <select name="player" id="player">
-                        <option value="">All</option>
-                        {% for player in filters.players %}
-                        <option value="{{ player }}" {% if filters.selected_player == player %}selected{% endif %}>{{ player }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit">Apply Filters</button>
-                </form>
-            </section>
-            <hr>
-            <!-- Recent War Stats Table -->
-            <section id="recent-war">
-                <h2>Most Recent War Stats</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Stat</th>
-                            <th>Attack</th>
-                            <th>Defense</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stat in recent_stats %}
-                        <tr>
-                            <td>{{ stat.name }}</td>
-                            <td>{{ stat.attack }}</td>
-                            <td>{{ stat.defense }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </section>
-            <hr>
-            <!-- All-Time Stats Table -->
-            <section id="all-time">
-                <h2>All Time War Stats</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Stat</th>
-                            <th>Attack</th>
-                            <th>Defense</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stat in all_time_stats %}
-                        <tr>
-                            <td>{{ stat.name }}</td>
-                            <td>{{ stat.attack }}</td>
-                            <td>{{ stat.defense }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </section>
-        </div>
-    </main>
-    <script>
-        const backgrounds = [
-            "../static/images/clash-of-clans-wall-breaker-vs-barbarian-xkva5z9lcx4g23e9.webp",
-            "../static/images/hog rider 1.webp",
-            "../static/images/hog rider 2.webp"
-        ];
-        // Pick a random image each load
-        const idx = Math.floor(Math.random() * backgrounds.length);
-        document.body.style.backgroundImage = `url('${backgrounds[idx]}')`;
-    </script>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Clan War League Stats - Pussay Palace{% endblock %}
+
+{% block content %}
+<div class="main-data-box">
+    <section id="filters">
+        <form method="get" action="{{ url_for('main.index') }}">
+            <label for="season">Season:</label>
+            <select name="season" id="season">
+                {% for season in filters.seasons %}
+                <option value="{{ season }}" {% if filters.selected_season == season %}selected{% endif %}>{{ season }}</option>
+                {% endfor %}
+            </select>
+            <label for="player">Player:</label>
+            <select name="player" id="player">
+                <option value="">All</option>
+                {% for player in filters.players %}
+                <option value="{{ player }}" {% if filters.selected_player == player %}selected{% endif %}>{{ player }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Apply Filters</button>
+        </form>
+    </section>
+    <hr>
+    <section id="recent-war">
+        <h2>Most Recent War Stats</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stat</th>
+                    <th>Attack</th>
+                    <th>Defense</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in recent_stats %}
+                <tr>
+                    <td>{{ stat.name }}</td>
+                    <td>{{ stat.attack }}</td>
+                    <td>{{ stat.defense }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    <hr>
+    <section id="all-time">
+        <h2>All Time War Stats</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stat</th>
+                    <th>Attack</th>
+                    <th>Defense</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in all_time_stats %}
+                <tr>
+                    <td>{{ stat.name }}</td>
+                    <td>{{ stat.attack }}</td>
+                    <td>{{ stat.defense }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
