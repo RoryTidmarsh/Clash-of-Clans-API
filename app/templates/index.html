@@ -5,7 +5,7 @@
 {% block content %}
 <div class="main-data-box">
     <section id="filters">
-        <form method="get" action="{{ url_for('main.index') }}">
+        <form method="get" action="#">
             <label for="season">Season:</label>
             <select name="season" id="season">
                 {% for season in filters.seasons %}

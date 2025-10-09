@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Website Title{% endblock %}</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <title>Clan War League Stats - Pussay Palace</title>
+    <link rel="icon" type="image/png" href="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
-    <header class="site-header">
+    <div class="site-header">
         <img class="site-logo" src="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png" alt="Clan Logo">
         <span class="site-title">Clan War Progress - Pussay Palace</span>
-        <button class="refresh-btn pastel-red-title .pastel-red-title:hover" onclick="location.reload()">
-            &#x21bb; Refresh Data
-        </button>
-    </header>
-    <nav class="nav-bar">
-        <a href="{{ url_for('main.index') }}">Home</a>
-        <a href="{{ url_for('main.war_table') }}">Full War Table</a>
-        <a href="{{ url_for('main.progress_graphs') }}">Progress Graphs</a>
-    </nav>
+    </div>
+    <div class="nav-bar">
+        <nav>
+            <a href="/">Home</a>
+            <a href="/coming-soon">Full War Table</a>
+            <a href="/coming-soon">Progress Graphs</a>
+        </nav>
+    </div>
     <main>
         {% block content %}{% endblock %}
     </main>
