@@ -236,7 +236,9 @@ def Update_Supabase_battle_tags(reduced_warTag_df):
                 print(f"Battle tag {row.wartag} already exists in the database. Skipping insertion.")
             else:
                 print(f"Storing battle tag {row.wartag} for day {row.battleday} of season {row.season} to supabase")
-                store_battle_tag(row.battleday, row.wartag, row.season)
+                response = store_battle_tag(row.battleday, row.wartag, row.season)
+                if response:
+                    print(f"Successfully stored battle tag {row.wartag} in the database.")
 
 def save_csv_battle_tags(existing_pussay_data, reduced_warTag_df, season):
     # # Save the reduced battle tag DataFrame to a CSV file
@@ -254,14 +256,24 @@ def save_csv_battle_tags(existing_pussay_data, reduced_warTag_df, season):
     new_pussay_data.to_csv(save_filepath, index=False)
     
 
-if __name__ == "__main__":
+def load_battle_tags_supabase(clan_tag, headers= headers):
+    """Load existing battle tags from the Supabase battle_tags table.
+
+    Args:
+        clan_tag (str): The clan tag of the clan to get the battle tags for.
+    """
+
+    if __name__ == "__main__":
+        prints = True
+    else:
+        prints = False
     # Get the battle tags for the current war league
     seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
-    print("seasonal battle tag df: ", seasonal_battle_tag_df)
+    if prints: print("seasonal battle tag df: ", seasonal_battle_tag_df)
 
     # Find which wars the clan is in
     clan_war_tags,clan_war_states = wars_with_clan(seasonal_battle_tag_df)    
-    print("Clan war tags for the week:", clan_war_tags)
+    if prints: print("Clan war tags for the week:", clan_war_tags)
 
     # Create a reduced DataFrame with only the war tags containing the clan, columns: battleday, wartag, season
     reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
@@ -270,3 +282,7 @@ if __name__ == "__main__":
     
     # Save to Supabase battle_tags table
     Update_Supabase_battle_tags(reduced_warTag_df)
+
+
+if __name__ == "__main__":
+    load_battle_tags_supabase(clan_tag, headers)

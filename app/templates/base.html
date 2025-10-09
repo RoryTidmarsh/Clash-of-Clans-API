@@ -12,7 +12,7 @@
     <div class="site-header">
         <img class="site-logo" src="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png" alt="Clan Logo">
         <span class="site-title">Clan War Progress - Pussay Palace</span>
-        <button class="refresh-btn pastel-red-title .pastel-red-title:hover" onclick="location.reload()">
+        <button id="refresh-btn" class="refresh-btn pastel-red-title">
             &#x21bb; Refresh Data
         </button>
     </div>
@@ -38,6 +38,29 @@
         ];
         const idx = Math.floor(Math.random() * backgrounds.length);
         document.body.style.backgroundImage = `url('${backgrounds[idx]}')`;
+
+        document.getElementById('refresh-btn').onclick = function() {
+        this.disabled = true;
+        this.textContent = "Refreshing...";
+        fetch('/refresh-data', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                this.textContent = data.message || "Refreshed!";
+                setTimeout(() => {
+                    this.textContent = "↻ Refresh Data";
+                    this.disabled = false;
+                    // Optionally, reload page if you want to see updated data
+                    // location.reload();
+                }, 1200);
+            })
+            .catch(() => {
+                this.textContent = "Error!";
+                setTimeout(() => {
+                    this.textContent = "↻ Refresh Data";
+                    this.disabled = false;
+                }, 1200);
+            });
+        };
     </script>
 </body>
 </html>

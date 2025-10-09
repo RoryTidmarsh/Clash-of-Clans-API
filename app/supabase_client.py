@@ -17,7 +17,8 @@ def store_battle_tag(battleday, wartag, season):
         "wartag": wartag,
         "season": season
     }
-    supabase.table("battle_tags").insert(data).execute()
+    response = supabase.table("battle_tags").insert(data).execute()
+    return response.data
 
 
 def get_battle_tags(SQL_query=None):
