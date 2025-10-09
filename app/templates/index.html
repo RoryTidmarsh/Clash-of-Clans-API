@@ -24,12 +24,18 @@
     </section>
     <hr>
     <section id="recent-war">
-        <h2>Most Recent War Stats</h2>
-        <table>
+        <h2>Most Recent War Stats (Averaged)</h2>
+        <table id="recent-stats-table">
             <thead>
                 <tr>
                     {% for column in recent_stats[0].keys() %}
-                    <th>{{ column }}</th>
+                        
+                    <th class="sortable">
+                        <button class="sortable-button" data-column="{{ column }}">
+                            {{ column }}
+                            <span class="sort-icon">▲</span> <!-- Placeholder for sort icon -->
+                        </button>
+                    </th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -46,12 +52,17 @@
     </section>
     <hr>
     <section id="all-time">
-        <h2>All Time War Stats</h2>
-        <table>
+        <h2>All Time War Stats (Averaged)</h2>
+        <table id="all-time-stats-table">
             <thead>
                 <tr>
                     {% for column in all_time_stats[0].keys() %}
-                    <th>{{ column }}</th>
+                    <th class="sortable">
+                        <button class="sortable-button" data-column="{{ column }}">
+                            {{ column }}
+                            <span class="sort-icon">▲</span> <!-- Placeholder for sort icon -->
+                        </button>
+                    </th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -67,4 +78,48 @@
         </table>
     </section>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        function makeTableSortable(tableId) {
+            const table = document.getElementById(tableId);
+            const headers = table.querySelectorAll("th.sortable");
+
+            headers.forEach((header) => {
+                let sortDirection = 1; // 1 for ascending, -1 for descending
+                header.addEventListener("click", function () {
+                    const columnIndex = Array.prototype.indexOf.call(headers, this);
+                    const rows = Array.from(table.querySelector("tbody").rows);
+
+                    // Sort rows based on the clicked column
+                    rows.sort((rowA, rowB) => {
+                        const cellA = rowA.cells[columnIndex].innerText.trim();
+                        const cellB = rowB.cells[columnIndex].innerText.trim();
+
+                        // Compare as numbers if numeric, otherwise as strings
+                        const valueA = isNaN(cellA) ? cellA : parseFloat(cellA);
+                        const valueB = isNaN(cellB) ? cellB : parseFloat(cellB);
+
+                        return sortDirection * (valueA > valueB ? 1 : valueA < valueB ? -1 : 0);
+                    });
+
+                    // Append sorted rows back to the table body
+                    const tbody = table.querySelector("tbody");
+                    rows.forEach((row) => tbody.appendChild(row));
+
+                    // Toggle sort direction for next click
+                    sortDirection *= -1;
+
+                    // Update the sort icon
+                    headers.forEach((h) => h.querySelector(".sort-icon").innerText = "▲");
+                    this.querySelector(".sort-icon").innerText = sortDirection === 1 ? "▲" : "▼";
+                });
+            });
+        }
+
+        // Make both tables sortable
+        makeTableSortable("recent-stats-table");
+        makeTableSortable("all-time-stats-table");
+    });
+</script>
 {% endblock %}

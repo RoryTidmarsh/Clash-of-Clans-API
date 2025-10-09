@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request
 from app.services.index_data import get_index_data
-from app.services.process_data import translate_columns, remove_columns
+from app.services.process_data import translate_columns, remove_columns,reorder_columns
 # from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
 from app.supabase_client import supabase
 
@@ -16,9 +16,10 @@ def index():
     page_data = get_index_data(season_filter, player_filter)
 
     # Translate and reorder columns
-    page_data["recent_stats"] = translate_columns(remove_columns(page_data["recent_stats"], ["season"]))
-    page_data["all_time_stats"] = translate_columns(remove_columns(page_data["all_time_stats"], ["season"]))
+    page_data["recent_stats"] = translate_columns(reorder_columns(remove_columns(page_data["recent_stats"], ["season"])))
+    page_data["all_time_stats"] = translate_columns(reorder_columns(remove_columns(page_data["all_time_stats"], ["season"])))
     
+    # print(reorder_columns(page_data["recent_stats"][0]))
     
 
     # Render the template with translated and reordered column names

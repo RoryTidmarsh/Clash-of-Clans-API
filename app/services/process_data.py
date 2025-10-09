@@ -53,20 +53,20 @@ COLUMN_TRANSLATIONS = {
 COLUMN_ORDER_PRIORITY = [
     "name",                # Player name should always come first
     "attack_stars",        # Key performance metrics should appear early
-    "attack_percentage",
     "defense_stars",
+    "attack_percentage",
     "defense_percentage",
-    "townhallLevel",       # General information about the player
     "attack_th_diff",
     "defense_th_diff",
+    "attack_duration",
+    "defense_duration",
+    "townhallLevel",       # General information about the player
     "mapPosition",
     "season",              # Other metadata columns
     "battleday",
     "tag",
     "attacker_townhallLevel",
     "defender_townhallLevel",
-    "attack_duration",
-    "defense_duration",
     "attacker_tag",
     "defender_tag",
     "wartag",
@@ -74,42 +74,52 @@ COLUMN_ORDER_PRIORITY = [
 
 def translate_columns(data):
     """
-    Replace column names in data with user-friendly names using COLUMN_TRANSLATIONS
-    and reorder columns based on COLUMN_ORDER_PRIORITY.
+    Translate column names in data using COLUMN_TRANSLATIONS.
 
     Args:
         data (list or pandas.DataFrame): A list of dictionaries or a pandas DataFrame.
 
     Returns:
-        list or pandas.DataFrame: Translated data with user-friendly column names,
-                                  reordered with COLUMN_ORDER_PRIORITY.
+        list or pandas.DataFrame: Data with column names translated.
     """
-
-    # Translate and reorder columns for pandas.DataFrame
     if isinstance(data, pd.DataFrame):
-        # Rename columns
-        data = data.rename(columns=lambda col: COLUMN_TRANSLATIONS.get(col, col))
-        # Reorder columns
+        # Translate column names for DataFrame
+        translated_columns = {col: COLUMN_TRANSLATIONS.get(col, col) for col in data.columns}
+        return data.rename(columns=translated_columns)
+    else:
+        # Translate column names for list of dictionaries
+        translated_data = []
+        for row in data:
+            translated_row = {COLUMN_TRANSLATIONS.get(key, key): value for key, value in row.items()}
+            translated_data.append(translated_row)
+        return translated_data
+
+
+def reorder_columns(data):
+    """
+    Reorder columns in data based on COLUMN_ORDER_PRIORITY.
+
+    Args:
+        data (list or pandas.DataFrame): A list of dictionaries or a pandas DataFrame.
+
+    Returns:
+        list or pandas.DataFrame: Data with columns reordered.
+    """
+    if isinstance(data, pd.DataFrame):
+        # Determine columns in priority order
         ordered_columns = [
-            COLUMN_TRANSLATIONS.get(col, col) for col in COLUMN_ORDER_PRIORITY if col in data.columns
+            COLUMN_TRANSLATIONS.get(col, col) for col in COLUMN_ORDER_PRIORITY if COLUMN_TRANSLATIONS.get(col, col) in data.columns
         ]
         other_columns = [col for col in data.columns if col not in ordered_columns]
         return data[ordered_columns + other_columns]
     else:
-        # Translate and reorder columns for list of dictionaries
-        translated_data = []
-        for row in data:
-            # Translate column names
-            translated_row = {COLUMN_TRANSLATIONS.get(key, key): value for key, value in row.items()}
-            translated_data.append(translated_row)
-
-        # Reorder columns
+        # Reorder columns for list of dictionaries
         reordered_data = []
-        for row in translated_data:
-            reordered_row = {key: row[key] for key in COLUMN_ORDER_PRIORITY if key in row}
+        for row in data:
+            reordered_row = {col: row[col] for col in COLUMN_ORDER_PRIORITY if col in row}
+            # Append remaining columns
             reordered_row.update({key: row[key] for key in row if key not in reordered_row})
             reordered_data.append(reordered_row)
-
         return reordered_data
     
 

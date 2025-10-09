@@ -12,6 +12,9 @@
     <div class="site-header">
         <img class="site-logo" src="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png" alt="Clan Logo">
         <span class="site-title">Clan War Progress - Pussay Palace</span>
+        <button class="refresh-btn pastel-red-title .pastel-red-title:hover" onclick="location.reload()">
+            &#x21bb; Refresh Data
+        </button>
     </div>
     <div class="nav-bar">
         <nav>
@@ -25,9 +28,13 @@
     </main>
     <script>
         const backgrounds = [
-            "../static/images/clash-of-clans-wall-breaker-vs-barbarian-xkva5z9lcx4g23e9.webp",
-            "../static/images/hog rider 1.webp",
-            "../static/images/hog rider 2.webp"
+            // "../static/images/clash-of-clans-wall-breaker-vs-barbarian-xkva5z9lcx4g23e9.webp",
+            // "../static/images/hog rider 1.webp",
+            // "../static/images/hog rider 2.webp",
+            "https://images.alphacoders.com/782/782653.png",
+            "https://wallpapercave.com/wp/wp14810994.webp",
+            "https://wallpapercave.com/wp/wp14645871.jpg",
+            
         ];
         const idx = Math.floor(Math.random() * backgrounds.length);
         document.body.style.backgroundImage = `url('${backgrounds[idx]}')`;

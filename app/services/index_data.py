@@ -26,7 +26,7 @@ def get_index_data(season_filter=None, player_filter=None):
         recent_data = data[data['season'] == most_recent_season]
     else:
         recent_data = []
-    print(recent_data["name"].describe())
+    
     # Important columns to display in tables
     important_columns = ["name", "attack_th_diff", "defense_th_diff", "attack_stars", "attack_percentage", "defense_stars", "defense_percentage", "season"]
 
