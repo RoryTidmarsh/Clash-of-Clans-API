@@ -5,7 +5,7 @@
 {% block content %}
 <div class="main-data-box">
     <section id="filters">
-        <form method="get" action="#">
+        <form method="get" action="/">
             <label for="season">Season:</label>
             <select name="season" id="season">
                 {% for season in filters.seasons %}
@@ -28,25 +28,17 @@
         <table>
             <thead>
                 <tr>
-                    <th>Player</th>
-                    <th>Attack TH Diff</th>
-                    <th>Defense TH Diff</th>
-                    <th>Attack Stars</th>
-                    <th>Attack %</th>
-                    <th>Defense Stars</th>
-                    <th>Defense %</th>
+                    {% for column in recent_stats[0].keys() %}
+                    <th>{{ column }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% for stat in recent_stats %}
+                {% for row in recent_stats %}
                 <tr>
-                    <td>{{ stat.name }}</td>
-                    <td>{{ stat.attack_th_diff }}</td>
-                    <td>{{ stat.defense_th_diff }}</td>
-                    <td>{{ stat.attack_stars }}</td>
-                    <td>{{ stat.attack_percentage }}</td>
-                    <td>{{ stat.defense_stars }}</td>
-                    <td>{{ stat.defense_percentage }}</td>
+                    {% for value in row.values() %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -58,25 +50,17 @@
         <table>
             <thead>
                 <tr>
-                    <th>Player</th>
-                    <th>Attack TH Diff</th>
-                    <th>Defense TH Diff</th>
-                    <th>Attack Stars</th>
-                    <th>Attack %</th>
-                    <th>Defense Stars</th>
-                    <th>Defense %</th>
+                    {% for column in all_time_stats[0].keys() %}
+                    <th>{{ column }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% for stat in all_time_stats %}
+                {% for row in all_time_stats %}
                 <tr>
-                    <td>{{ stat.name }}</td>
-                    <td>{{ stat.attack_th_diff }}</td>
-                    <td>{{ stat.defense_th_diff }}</td>
-                    <td>{{ stat.attack_stars }}</td>
-                    <td>{{ stat.attack_percentage }}</td>
-                    <td>{{ stat.defense_stars }}</td>
-                    <td>{{ stat.defense_percentage }}</td>
+                    {% for value in row.values() %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>

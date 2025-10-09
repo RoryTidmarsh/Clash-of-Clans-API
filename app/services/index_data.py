@@ -17,55 +17,71 @@ def get_index_data(season_filter=None, player_filter=None):
     if "error" in result:
         return {"error": result["error"]}  # Return error if query fails
     
-    data = result.data
+    data = pd.DataFrame(result.data)
+    
 
+    # Filter for the most recent season's data
     most_recent_season = find_mostRecent_season()
     if most_recent_season:
-        recent_data = [entry for entry in data if entry.get("season") == most_recent_season]
+        recent_data = data[data['season'] == most_recent_season]
     else:
         recent_data = []
-
+    print(recent_data["name"].describe())
     # Important columns to display in tables
-    important_columns = ["name", "attack_th_diff", "defense_th_diff", "attack_stars", "attack_percentage", "defense_stars", "defense_percentage"]
+    important_columns = ["name", "attack_th_diff", "defense_th_diff", "attack_stars", "attack_percentage", "defense_stars", "defense_percentage", "season"]
 
-    def calculate_averages_by_player(dataset, columns):
+    def calculate_averages_by_player(dataset, columns = important_columns):
         """
         Calculate averages for the specified columns in the dataset grouped by player name.
         Returns a dictionary where each key is the player's name and the value is a dictionary of averaged data.
+
+        Args:
+            dataset (pd.DataFrame): The dataset to process.
+            columns (list): List of columns to calculate averages for.
+
+        Returns:
+            dict: A dictionary with player names as keys and their averaged stats as values.
         """
         averages = {}
 
-        # Group data by player name
-        players = set(entry["name"] for entry in dataset if entry.get("name"))
-        for player in players:
-            # Filter data for the current player
-            player_data = [entry for entry in dataset if entry.get("name") == player]
+        if isinstance(dataset, pd.DataFrame) and not dataset.empty:
+            grouped = dataset.groupby("name")
+            for name, group in grouped:
+                avg_data = {}
+                for col in columns:
+                    if col in group.columns and pd.api.types.is_numeric_dtype(group[col]):
+                        avg_data[col] = round(group[col].mean(), 2)
+                    elif col in group.columns:
+                        avg_data[col] = group[col].iloc[0]  # Non-numeric columns, take first value
+                averages[name] = avg_data
+        # re format into a pandas dataframe for easier rendering in template# Translate column names to user-friendly names
+    
+        averages = pd.DataFrame.from_dict(averages, orient='index').reset_index().rename(columns={"index": "name"})
 
-            # Calculate averages for the specified columns
-            player_averages = {}
-            for column in columns:
-                if column == "name":
-                    continue  # Skip the name column
-                values = [entry[column] for entry in player_data if entry.get(column) is not None]
-                average = sum(values) / len(values) if values else 0
-                player_averages[column] = average
-
-            # Store the result for the player
-            averages[player] = player_averages
-
+        #drop one of the "name" columns if it exists
+        if "name" in averages.columns and "name" in averages.columns[1:]:
+            averages = averages.loc[:,~averages.columns.duplicated()]
+        
         return averages
+    
 
     # Example: Extract recent stats (last battleday) and all-time stats
     recent_stats = calculate_averages_by_player(recent_data, important_columns)
     all_time_stats = calculate_averages_by_player(data, important_columns)
 
+    seasons = list(data["season"].unique())
+    players = list(data["name"].unique())
+     
     # Define filters for the dropdowns (static or dynamic)
     filters = {
-        "seasons": list(set(entry["season"] for entry in data if entry.get("season"))),
-        "players": list(set(entry["name"] for entry in data if entry.get("name"))),
-        "selected_season": season_filter or "All Seasons",
-        "selected_player": player_filter or "All Players"
+        "seasons": seasons,
+        "players": players,
+        "selected_season": season_filter if season_filter is not None else "All Seasons",
+        "selected_player": player_filter if player_filter is not None else "All Players"
     }
+
+    recent_stats = recent_stats.to_dict(orient='records')
+    all_time_stats = all_time_stats.to_dict(orient='records')
 
     # Return structured data
     return {
@@ -84,4 +100,5 @@ def find_mostRecent_season():
 if __name__ == "__main__":
     season = find_mostRecent_season()
     data = get_index_data(season_filter=season)
-    print(data)
+    
+    print(f"Recent stats for season {season}: \n{type(data['recent_stats'])} \n{data['recent_stats'][0]}")

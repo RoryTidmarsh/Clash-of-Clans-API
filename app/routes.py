@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request
 from app.services.index_data import get_index_data
+from app.services.process_data import translate_columns, remove_columns
 # from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
 from app.supabase_client import supabase
 
@@ -7,18 +8,20 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/', methods=['GET'])
 def index():
-    # Get filters from request args (e.g., season, player)
-    season_filter = request.args.get("season")
-    player_filter = request.args.get("player")
+    # Get filters from request args
+    season_filter = request.args.get("season")  # Get the "season" query parameter, if provided
+    player_filter = request.args.get("player")  # Get the "player" query parameter, if provided
 
-    # Fetch data using the service function
+    # Fetch raw data
     page_data = get_index_data(season_filter, player_filter)
 
-    # Check for errors
-    if "error" in page_data:
-        return f"Error fetching data: {page_data['error']}", 500
+    # Translate and reorder columns
+    page_data["recent_stats"] = translate_columns(remove_columns(page_data["recent_stats"], ["season"]))
+    page_data["all_time_stats"] = translate_columns(remove_columns(page_data["all_time_stats"], ["season"]))
+    
+    
 
-    # Pass the data to the template
+    # Render the template with translated and reordered column names
     return render_template(
         "index.html",
         filters=page_data["filters"],
