@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, Response
 from app.services.index_data import get_index_data
 from app.services.process_data import translate_columns, remove_columns,reorder_columns
 from app.services.Find_battletags import get_war_tags, wars_with_clan
@@ -59,8 +59,10 @@ def progress_graphs():
 
 @bp.route('/refresh-data', methods=['POST'])
 def refresh_data():
-    # Run your data refresh logic (adapt as needed)
-    # Get battle tags
+    import os
+    from flask import jsonify
+
+    messages = []
     coc_api_key = os.getenv("COC_API_KEY")
     clan_tag = "%23CQGY2LQU"
     headers = {
@@ -68,17 +70,46 @@ def refresh_data():
         "authorization": "Bearer %s" % coc_api_key
     }  
     seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
+    messages.append("CWL WAR TAGS FOUND")
     clan_war_tags, clan_war_states = wars_with_clan(seasonal_battle_tag_df)
+    messages.append("CLAN ONLY WAR TAGS FOUND")
 
     war_manager = WarDataManager(status_table="war_status")
+    total = sum(1 for tag in clan_war_tags.values() if tag != "#0")
+    done = 0
+
     for day, wartag in clan_war_tags.items():
         if wartag == "#0":
             continue
-        print(f"Refreshing war data for: {wartag}, day {day}, season {season}")
+        msg = f"Refreshing war data for: {wartag}, day {day}, season {season}"
+        print(msg, flush=True)
+        messages.append(msg)
+
+        # Process the war
         war_manager.process_war(
             wartag,
             get_war_stats,
             season=season,
             battleday=day
         )
-    return jsonify({"success": True, "message": "Data refreshed!"})
+
+        # Increment progress and log status
+        done += 1
+        progress_msg = f"Found data for {done}/{total}"
+        print(progress_msg, flush=True)
+        messages.append(progress_msg)
+    
+    messages.append("Data refreshed!")
+    return jsonify({"success": True, "message": "Data refreshed!", "log": messages})
+
+@bp.route('/refresh-status')
+def refresh_status():
+    def event_stream():
+        # Imagine these are your steps
+        yield "data: Starting refresh...\n\n"
+        yield "data: Finding battletags...\n\n"
+        # Call Find_battletags function here, yield progress...
+        yield "data: Reading war data...\n\n"
+        # Call reading_WarData function here, yield progress...
+        yield "data: Done!\n\n"
+    return Response(event_stream(), mimetype="text/event-stream")

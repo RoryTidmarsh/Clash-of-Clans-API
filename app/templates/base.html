@@ -15,6 +15,7 @@
         <button id="refresh-btn" class="refresh-btn pastel-red-title">
             &#x21bb; Refresh Data
         </button>
+        
     </div>
     <div class="nav-bar">
         <nav>
@@ -40,26 +41,26 @@
         document.body.style.backgroundImage = `url('${backgrounds[idx]}')`;
 
         document.getElementById('refresh-btn').onclick = function() {
-        this.disabled = true;
-        this.textContent = "Refreshing...";
-        fetch('/refresh-data', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                this.textContent = data.message || "Refreshed!";
-                setTimeout(() => {
-                    this.textContent = "↻ Refresh Data";
-                    this.disabled = false;
-                    // Optionally, reload page if you want to see updated data
-                    // location.reload();
-                }, 1200);
-            })
-            .catch(() => {
-                this.textContent = "Error!";
-                setTimeout(() => {
-                    this.textContent = "↻ Refresh Data";
-                    this.disabled = false;
-                }, 1200);
-            });
+            this.disabled = true;
+            this.textContent = "Refreshing...";
+            fetch('/refresh-data', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    this.textContent = data.message || "Refreshed!";
+                    let log = data.log || [];
+                    document.getElementById('status-box').textContent = log.join('\n');
+                    setTimeout(() => {
+                        this.textContent = "↻ Refresh Data";
+                        this.disabled = false;
+                    }, 1200);
+                })
+                .catch(() => {
+                    this.textContent = "Error!";
+                    setTimeout(() => {
+                        this.textContent = "↻ Refresh Data";
+                        this.disabled = false;
+                    }, 1200);
+                });
         };
     </script>
 </body>
