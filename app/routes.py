@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request
-from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
+# from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
 from app.supabase_client import supabase
 
 bp = Blueprint('main', __name__)
