@@ -79,6 +79,21 @@ body {
     width: calc(100vw - 80px);
     min-width: 320px;
 }
+.pastel-red-title {
+    color: #b71c1c; /* Deep red */
+    background: #fff5f5; /* Pastel red background */
+    border: 2px solid #b71c1c; /* Red border */
+    border-radius: 8px;
+    font-size: 1.35em;
+    font-weight: 600;
+    padding: 10px 18px;
+    text-align: center;
+    margin: 12px 0;
+    box-sizing: border-box;
+}
+.refresh-btn {
+    margin-left: auto; /* Pushes the button to the far right */
+}
 
 /* --- Table styling --- */
 table {
