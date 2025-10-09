@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from supabase_client import supabase
+from supabase_client import supabase, update_war_status
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")
@@ -34,7 +34,27 @@ response_codes = {
     500: "Server error. Something is wrong on Clash of Clans side.",
     503: "Server is down for maintenance.",
 }
-
+WAR_DATA_SCHEMA = {
+    'tag': str,
+    'name': str,
+    'townhallLevel': int,
+    'mapPosition': int,
+    'attacker_townhallLevel': int,
+    'defender_townhallLevel': int,
+    'attack_th_diff': int,
+    'defense_th_diff': int,
+    'attack_stars': int,
+    'attack_percentage': int,
+    'attack_duration': int,
+    'defender_tag': str,
+    'defense_stars': int,
+    'defense_percentage': int,
+    'defense_duration': int,
+    'attacker_tag': str,
+    'season': str,
+    'battleday': int,
+    'wartag': str
+}
 class member():
     def __init__(self, member_json):
         self.tag = member_json["tag"]
@@ -128,21 +148,43 @@ class member():
         return {
             'tag': self.tag,
             'name': self.name,
-            'townhallLevel': self.townhallLevel,
-            'mapPosition': self.mapPosistion,
-            'attacker_townhallLevel': self.attacker_townhallLevel,
-            'defender_townhallLevel': self.defender_townhallLevel,
-            'attack_th_diff': self.attack_th_diff,  # Positive means attacked higher TH
-            'defense_th_diff': self.defense_th_diff,  # Positive means defended against higher TH
-            'attack_stars': self.attack_stars,
-            'attack_percentage': self.attack_percentage,
-            'attack_duration': self.attack_duration,
+            'townhallLevel': self._to_int(self.townhallLevel),
+            'mapPosition': self._to_int(self.mapPosistion),
+            'attacker_townhallLevel': self._to_int(self.attacker_townhallLevel),
+            'defender_townhallLevel': self._to_int(self.defender_townhallLevel),
+            'attack_th_diff': self._to_int(self.attack_th_diff),  # Positive means attacked higher TH
+            'defense_th_diff': self._to_int(self.defense_th_diff),  # Positive means defended against higher TH
+            'attack_stars': self._to_int(self.attack_stars),
+            'attack_percentage': self._to_int(self.attack_percentage),
+            'attack_duration': self._to_int(self.attack_duration),
             'defender_tag': self.defender_tag,
-            'defense_stars': self.defense_stars,
-            'defense_percentage': self.defense_percentage,
-            'defense_duration': self.defense_duration,
+            'defense_stars': self._to_int(self.defense_stars),
+            'defense_percentage': self._to_int(self.defense_percentage),
+            'defense_duration': self._to_int(self.defense_duration),
             'attacker_tag': self.attacker_tag
         }
+    def _to_int(self, value):
+        import numpy as np
+
+        # Handle None and "nan" (string)
+        if value is None:
+            return None
+        if isinstance(value, float) and np.isnan(value):
+            return None
+        if isinstance(value, str):
+            val_strip = value.strip("'\"").strip().lower()
+            if val_strip == "nan":
+                return None
+            try:
+                return int(float(val_strip))
+            except Exception:
+                print(f"Warning: Could not convert string value '{value}' to int.")
+                return None
+        try:
+            return int(value)
+        except Exception:
+            print(f"Warning: Could not convert value '{value}' of type '{type(value)}' to int.")
+            return None
                
 def get_war_stats(battle_tag):
     """This function retrieves the war stats for a given battle tag from the Clash of Clans API for the 'Pussay Palace' clan.
@@ -201,7 +243,7 @@ def get_war_stats(battle_tag):
         clan_member.find_attacker_TH_level(war_data[Opponent_clan_or_opponent])
 
         member_array.append(clan_member)
-        print(clan_member)
+        # print(clan_member)
     assert len(member_array) == len(war_data[Pussay_clan_or_opponent]["members"])
 
     # Store information in a dataframe
@@ -214,54 +256,57 @@ def get_war_stats(battle_tag):
     return war_info_df, war_data["state"]
 
 class WarDataManager:
-    def __init__(self, status_file_path="war_status.csv", data_folder="war_data"):
+    def __init__(self, status_table="war_status"):
         """
         Initialize the War Data Manager
         
         Args:
-            status_file_path: Path to CSV tracking war status
-            data_folder: Folder where individual war data files are stored
+            status_table: Table in Supabase tracking war status
         """
-        self.status_file_path = status_file_path
-        self.data_folder = data_folder
+        self.status_table = status_table
         
-        # Create data folder if it doesn't exist
-        os.makedirs(data_folder, exist_ok=True)
-        
-        # Load or create status tracking file
-        if os.path.exists(status_file_path):
-            self.status_df = pd.read_csv(status_file_path)
+    def get_war_status(self, wartag):
+        """
+        Get the war status for a specific war tag from Supabase
+
+        Args:
+            wartag: The war tag to look up
+        Returns:
+            dict or None: War status record if found, None otherwise
+        """
+        war_status = supabase.table(self.status_table).select("*").eq("wartag", wartag).execute().data
+        if war_status and len(war_status) > 0:
+            # return single record as dict (not a DataFrame) so callers get scalars
+            return war_status[0]
         else:
-            self.status_df = pd.DataFrame(columns=[
-                'wartag', 'COC_war_status', 'loading_status', 'last_updated', 'data_file'
-            ])
+            return None
 
     def should_load_war(self, wartag):
         """
         Check if a war should be loaded from the API
-        
+
         Args:
             wartag: The war tag to check
-            
+
         Returns:
             bool: True if war should be loaded, False if it can be skipped
         """
         # Check if war tag exists in status tracking
-        war_status = self.status_df[self.status_df['wartag'] == wartag]
-        
-        if war_status.empty:
+        war_status = self.get_war_status(wartag)
+
+        if war_status is None:
             # War not tracked yet, should load
             print(f"War {wartag} not tracked yet. Will load.")
             return True
-        
-        loading_status = war_status.iloc[0]['loading_status']
-        coc_status = war_status.iloc[0]['COC_war_status']
-        
+
+        loading_status = war_status.get('loading_status')
+        coc_status = war_status.get('coc_war_status')
+
         # skip if loading_status is 'completed'
         if loading_status in ['completed', "Error - too old"]:
             print(f"War {wartag} already marked as '{loading_status}' (COC status: {coc_status}). Skipping.")
             return False
-        
+
         # Reload if 'notLoaded' or 'inProgress'
         print(f"War {wartag} loading status: {loading_status}, COC status: {coc_status}. Will reload.")
         return True
@@ -286,67 +331,108 @@ class WarDataManager:
             # This shouldn't normally happen, but default to notLoaded
             return "notLoaded"
         
-    def get_war_data_path(self, wartag):
-        """Generate file path for storing war data"""
-        # Clean the wartag for use in filename
-        clean_tag = wartag.replace('#', '').replace('%23', '')
-        return os.path.join(self.data_folder, f"war_{clean_tag}.csv")
+    def clean_record_for_supabase(self, record, schema=WAR_DATA_SCHEMA):
+        cleaned = {}
+        for key, dtype in schema.items():
+            val = record.get(key)
+            if dtype is int:
+                try:
+                    # Handle None, np.nan, and string 'nan'
+                    if val is None:
+                        cleaned[key] = None
+                    elif isinstance(val, float) and (np.isnan(val) or str(val).lower() == "nan"):
+                        cleaned[key] = None
+                    elif isinstance(val, str) and val.strip().lower() == "nan":
+                        cleaned[key] = None
+                    else:
+                        cleaned[key] = int(float(val))
+                except Exception:
+                    cleaned[key] = None
+            elif dtype is str:
+                # Handle None and clean up strings
+                if val is None:
+                    cleaned[key] = None
+                else:
+                    cleaned[key] = str(val).strip()
+            else:
+                cleaned[key] = val
+        return cleaned
     
-    def save_war_data(self, wartag, war_df, coc_war_status, season=None, battleday=None):
-        """
-        Save war data and update status tracking
-        
-        Args:
-            wartag: The war tag
-            war_df: DataFrame containing war data
-            coc_war_status: Current status of the war from COC API 
-                           ('inWar', 'warEnded', 'preparation')
-        """
-        # Only save war data if it's not empty
-        if war_df is not None and not war_df.empty:
-            # Ensure season and battleday columns exist if provided
-            if season is not None and 'season' not in war_df.columns:
-                war_df['season'] = season
-            if battleday is not None and 'battleday' not in war_df.columns:
-                war_df['battleday'] = battleday
+    def save_war_data(self, wartag, war_df, coc_war_status, season, battleday):
+        # Add metadata
+        war_df['wartag'] = wartag
+        war_df['season'] = season
+        battleday = int(battleday) if battleday is not None else None
+        war_df['battleday'] = battleday
 
-            data_path = self.get_war_data_path(wartag)
-            war_df.to_csv(data_path, index=False)
-        else:
-            # Mark as no data
-            data_path = None
-        
+        if war_df is not None and not war_df.empty:
+            clean_df = war_df.replace([np.inf, -np.inf], None)
+            clean_df = clean_df.map(lambda x: None if pd.isnull(x) else x)
+
+            records = clean_df.to_dict(orient='records')
+            for record in records:
+                record = self.clean_record_for_supabase(record)
+                try:
+                    # Check if the row exists (by wartag and tag)
+                    query = supabase.table("war_data") \
+                        .select("wartag,tag") \
+                        .eq("wartag", record["wartag"]) \
+                        .eq("tag", record["tag"]) \
+                        .execute()
+                    exists = query.data and len(query.data) > 0
+
+                    if not exists:
+                        print(f"Inserted new war data for {record['tag']} in war {record['wartag']}")
+                        # Insert new row
+                        supabase.table("war_data").insert(record).execute()
+                        
+                    else:
+                        print(f"Updated war data for {record['tag']} in war {record['wartag']}")
+                        # Update existing row
+                        response = supabase.table("war_data") \
+                            .update(record) \
+                            .eq("wartag", record["wartag"]) \
+                            .eq("tag", record["tag"]) \
+                            .execute()
+
+                except Exception as e:
+                    print(record)
+                    raise ValueError(f"Error upserting war data to Supabase: {e}")
+                
+
         # Determine loading status based on COC war status
         loading_status = self.determine_loading_status(coc_war_status)
-        
-        # Update status tracking
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Remove existing entry if present
-        self.status_df = self.status_df[self.status_df['wartag'] != wartag]
-        
-        # Add new entry
-        new_row = pd.DataFrame([{
-            'wartag': wartag,
-            'COC_war_status': coc_war_status,
-            'loading_status': loading_status,
-            'last_updated': current_time,
-            'data_file': data_path if data_path else "",
-            'season': season if season is not None else "",
-            'battleday': battleday if battleday is not None else ""
-        }])
-        
-        self.status_df = pd.concat([self.status_df, new_row], ignore_index=True)
-        
-        # Save status file
-        self.status_df.to_csv(self.status_file_path, index=False)
-        
+
+        # Upsert war status
+        try:
+            # Check if war_status row exists
+            status_query = supabase.table("war_status") \
+                .select("id") \
+                .eq("wartag", wartag) \
+                .execute()
+            status_exists = status_query.data and len(status_query.data) > 0
+
+            war_status_record = {
+                "wartag": wartag,
+                "coc_war_status": coc_war_status,
+                "loading_status": loading_status,
+                "last_updated": current_time
+            }
+
+            if not status_exists:
+                result = supabase.table("war_status").insert(war_status_record).execute()
+            else:
+                result = supabase.table("war_status").update(war_status_record).eq("wartag", wartag).execute()
+
+        except Exception as e:
+            print(f"Error upserting war status to Supabase: {e}")
+
         status_symbol = "✓" if loading_status == "completed" else "⋯"
         if coc_war_status == "notInWar" or loading_status in ["Error - too old", "notLoaded"]:
             print(f"✗ Skipping war {wartag} | Marked as {coc_war_status} ({loading_status}) — will not reload again.")
         else:
-            print(f"⋯ Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
-        # print(f"{status_symbol} Saved war {wartag} | COC: {coc_war_status} | Loading: {loading_status}")
+            print(f"{status_symbol} Saved war {wartag} | COC war status:{coc_war_status} | Loading: {loading_status}")
 
     def load_cached_war_data(self, wartag):
         """
@@ -358,13 +444,15 @@ class WarDataManager:
         Returns:
             pd.DataFrame or None: War data if available, None otherwise
         """
-        data_path = self.get_war_data_path(wartag)
         
-        if os.path.exists(data_path):
-            return pd.read_csv(data_path)
-        return None
+        # Load specific war data from supabase "war_data" table
+        war_data = supabase.table("war_data").select("*").eq("wartag", wartag).execute().data
+        if war_data:
+            return pd.DataFrame(war_data)
+        else:
+            return None
     
-    def process_war(self, wartag, get_war_stats_func, season=None, battleday=None):
+    def process_war(self, wartag, get_war_stats_func, season=None,   battleday=None):
         """
         Process a single war - either load from cache or fetch from API
         
@@ -383,17 +471,17 @@ class WarDataManager:
             # Try cache — but if none, just return immediately and do NOT call API
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
-                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                war_status = self.get_war_status(wartag)
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
                 if battleday is not None and 'battleday' not in cached_data.columns:
                     cached_data['battleday'] = battleday
-                return cached_data, war_status['COC_war_status'], war_status['loading_status'], True
+                return cached_data, war_status['coc_war_status'], war_status['loading_status'], True
             
             # ✅ NO CACHE — means this war is permanently skipped
-            war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+            war_status = self.get_war_status(wartag)
             print(f"⚠ No cached data for {wartag} — but it's marked as '{war_status['loading_status']}'. Skipping API call.")
-            return pd.DataFrame(), war_status['COC_war_status'], war_status['loading_status'], False
+            return pd.DataFrame(), war_status['coc_war_status'], war_status['loading_status'], False
 
         
         # Load from API
@@ -411,7 +499,7 @@ class WarDataManager:
             # Determine loading status
             loading_status = self.determine_loading_status(coc_war_status)
             
-            # Save the data, ensuring season and battleday persist to file
+            # Save the data, ensuring season and battleday persist to table
             self.save_war_data(wartag, war_df, coc_war_status, season=season, battleday=battleday)
             
             return war_df, coc_war_status, loading_status, False
@@ -435,7 +523,7 @@ class WarDataManager:
             cached_data = self.load_cached_war_data(wartag)
             if cached_data is not None:
                 print(f"⚠ Returning cached data for {wartag} due to API error")
-                war_status = self.status_df[self.status_df['wartag'] == wartag].iloc[0]
+                war_status = self.get_war_status(wartag)
                 # Add season and cwl_day if not already present
                 if season is not None and 'season' not in cached_data.columns:
                     cached_data['season'] = season
@@ -443,7 +531,7 @@ class WarDataManager:
                     cached_data['battleday'] = battleday
                 return (
                     cached_data,
-                    war_status['COC_war_status'],
+                    war_status['coc_war_status'],
                     war_status['loading_status'],
                     True
                 )
@@ -456,7 +544,12 @@ class WarDataManager:
         Returns:
             dict: Summary statistics
         """
-        if self.status_df.empty:
+        # Load the latest status data from Supabase
+        war_status_data = supabase.table(self.status_table).select("*").execute().data
+        status_df = pd.DataFrame(war_status_data) if war_status_data else pd.DataFrame(columns=[
+            'wartag', 'coc_war_status', 'loading_status', 'last_updated', 'data_file'
+        ])
+        if status_df.empty:
             return {
                 'total_wars': 0,
                 'completed': 0,
@@ -465,11 +558,11 @@ class WarDataManager:
             }
         
         return {
-            'total_wars': len(self.status_df),
-            'completed': len(self.status_df[self.status_df['loading_status'] == 'completed']),
-            'in_progress': len(self.status_df[self.status_df['loading_status'] == 'inProgress']),
-            'not_loaded': len(self.status_df[self.status_df['loading_status'].isin(['notLoaded'])]),
-            'too_old': len(self.status_df[self.status_df['loading_status'] == 'Error - too old'])
+            'total_wars': len(status_df),
+            'completed': len(status_df[status_df['loading_status'] == 'completed']),
+            'in_progress': len(status_df[status_df['loading_status'] == 'inProgress']),
+            'not_loaded': len(status_df[status_df['loading_status'].isin(['notLoaded'])]),
+            'too_old': len(status_df[status_df['loading_status'] == 'Error - too old'])
         }
     
     def __repr__(self):
@@ -491,13 +584,13 @@ class WarDataManager:
 if __name__ == "__main__":
     # Initialize the manager
     war_manager = WarDataManager(
-        status_file_path="war_status.csv",
-        data_folder="war_data"
+        status_table="war_status"
     )
     
-    # Load your battle tags CSV
-    Pussay_wars_df = pd.read_csv("Pussay_battle_tags.csv")
-    
+    # Load your battle tags from supabase
+    Pussay_wars = supabase.table("battle_tags").select("*").execute().data
+    Pussay_wars_df = pd.DataFrame(Pussay_wars)
+
     # Process each war
     all_wars_data = []
     
@@ -517,7 +610,7 @@ if __name__ == "__main__":
             # Process the war (will use cache if completed)
             war_df, coc_status, loading_status, was_cached = war_manager.process_war(
                 wartag,
-                get_war_stats,  # Your existing function
+                get_war_stats,  # Your existing code
                 season=season,
                 battleday=battleday
             )
@@ -543,11 +636,3 @@ if __name__ == "__main__":
     
     # Print summary
     print(war_manager)
-    
-    # Combine all wars into single DataFrame
-    if all_wars_data:
-        combined_df = pd.concat(all_wars_data, ignore_index=True)
-        print(f"Successfully loaded {len(all_wars_data)} wars")
-        print(f"Total player records: {len(combined_df)}")
-    else:
-        print("No war data loaded.")
