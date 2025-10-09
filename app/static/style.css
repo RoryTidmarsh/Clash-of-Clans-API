@@ -94,6 +94,13 @@ body {
 .refresh-btn {
     margin-left: auto; /* Pushes the button to the far right */
 }
+.pastel-red-title:hover {
+    background: #ffebeb;      /* Slightly lighter pastel red */
+    color: #d32f2f;           /* More vivid red */
+    border-color: #d32f2f;
+    box-shadow: 0 2px 12px rgba(183, 28, 28, 0.18);
+    transform: scale(1.05);   /* Slightly enlarge on hover */
+}
 
 /* --- Table styling --- */
 table {
