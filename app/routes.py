@@ -1,32 +1,50 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
+from app.services.index_data import get_index_data
+# from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
+from app.supabase_client import supabase
 
 bp = Blueprint('main', __name__)
 
 @bp.route('/', methods=['GET'])
 def index():
-    # Placeholder data for testing the index page
-    filters = {
-        "seasons": ["Spring 2025", "Summer 2025"],
-        "players": ["Player1", "Player2"],
-        "selected_season": "Spring 2025",
-        "selected_player": "Player1"
-    }
-    recent_stats = [
-        {"name": "Placeholder Stat 1", "attack": "Placeholder Attack", "defense": "Placeholder Defense"},
-        {"name": "Placeholder Stat 2", "attack": "Placeholder Attack", "defense": "Placeholder Defense"}
-    ]
-    all_time_stats = [
-        {"name": "Placeholder Stat 1", "attack": "Placeholder Attack", "defense": "Placeholder Defense"},
-        {"name": "Placeholder Stat 2", "attack": "Placeholder Attack", "defense": "Placeholder Defense"}
-    ]
+    # Get filters from request args (e.g., season, player)
+    season_filter = request.args.get("season")
+    player_filter = request.args.get("player")
+
+    # Fetch data using the service function
+    page_data = get_index_data(season_filter, player_filter)
+
+    # Check for errors
+    if "error" in page_data:
+        return f"Error fetching data: {page_data['error']}", 500
+
+    # Pass the data to the template
     return render_template(
         "index.html",
-        filters=filters,
-        recent_stats=recent_stats,
-        all_time_stats=all_time_stats
+        filters=page_data["filters"],
+        recent_stats=page_data["recent_stats"],
+        all_time_stats=page_data["all_time_stats"]
     )
 
 @bp.route('/coming-soon', methods=['GET'])
 def coming_soon():
     # Simple route for "Coming Soon" page
     return render_template("coming_soon.html")
+
+@bp.route('/war-table', methods=['GET'])
+def war_table():
+    # Placeholder route for war table page
+    war_data = [
+        {"name": "War Data 1", "detail": "Details about War Data 1"},
+        {"name": "War Data 2", "detail": "Details about War Data 2"}
+    ]
+    return render_template("war_table.html", war_data=war_data)
+
+@bp.route('/progress-graphs', methods=['GET'])
+def progress_graphs():
+    # Placeholder route for progress graphs page
+    graph_data = {
+        "labels": ["January", "February", "March"],
+        "values": [10, 20, 30]
+    }
+    return render_template("progress_graphs.html", graph_data=graph_data)

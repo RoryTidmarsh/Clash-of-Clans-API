@@ -28,17 +28,25 @@
         <table>
             <thead>
                 <tr>
-                    <th>Stat</th>
-                    <th>Attack</th>
-                    <th>Defense</th>
+                    <th>Player</th>
+                    <th>Attack TH Diff</th>
+                    <th>Defense TH Diff</th>
+                    <th>Attack Stars</th>
+                    <th>Attack %</th>
+                    <th>Defense Stars</th>
+                    <th>Defense %</th>
                 </tr>
             </thead>
             <tbody>
                 {% for stat in recent_stats %}
                 <tr>
                     <td>{{ stat.name }}</td>
-                    <td>{{ stat.attack }}</td>
-                    <td>{{ stat.defense }}</td>
+                    <td>{{ stat.attack_th_diff }}</td>
+                    <td>{{ stat.defense_th_diff }}</td>
+                    <td>{{ stat.attack_stars }}</td>
+                    <td>{{ stat.attack_percentage }}</td>
+                    <td>{{ stat.defense_stars }}</td>
+                    <td>{{ stat.defense_percentage }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -50,17 +58,25 @@
         <table>
             <thead>
                 <tr>
-                    <th>Stat</th>
-                    <th>Attack</th>
-                    <th>Defense</th>
+                    <th>Player</th>
+                    <th>Attack TH Diff</th>
+                    <th>Defense TH Diff</th>
+                    <th>Attack Stars</th>
+                    <th>Attack %</th>
+                    <th>Defense Stars</th>
+                    <th>Defense %</th>
                 </tr>
             </thead>
             <tbody>
                 {% for stat in all_time_stats %}
                 <tr>
                     <td>{{ stat.name }}</td>
-                    <td>{{ stat.attack }}</td>
-                    <td>{{ stat.defense }}</td>
+                    <td>{{ stat.attack_th_diff }}</td>
+                    <td>{{ stat.defense_th_diff }}</td>
+                    <td>{{ stat.attack_stars }}</td>
+                    <td>{{ stat.attack_percentage }}</td>
+                    <td>{{ stat.defense_stars }}</td>
+                    <td>{{ stat.defense_percentage }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
