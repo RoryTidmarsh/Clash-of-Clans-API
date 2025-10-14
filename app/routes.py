@@ -3,8 +3,10 @@ from app.services.index_data import get_index_data
 from app.services.process_data import translate_columns, remove_columns,reorder_columns
 from app.services.Find_battletags import get_war_tags, wars_with_clan
 from app.services.reading_WarData import WarDataManager, get_war_stats
+import app.services.graphs as graphs_service
 import pandas as pd
 import os
+import json
 # from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
 from app.supabase_client import supabase
 
@@ -51,17 +53,35 @@ def war_table():
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():
     # Placeholder route for progress graphs page
-    graph_data = {
-        "labels": ["January", "February", "March"],
-        "values": [10, 20, 30]
-    }
-    return render_template("progress_graphs.html", graph_data=graph_data)
+    # Generate noisy graph data
+    graph_data = [
+        ("05-2025", 2.9 + 0.7),
+        ("06-2025", 3.5 - 0.4),
+        ("07-2025", 4.0 + 0.9),
+        ("08-2025", 4.2 - 0.6),
+        ("09-2025", 4.8 + 0.5),
+        ("10-2025", 5.1 - 0.8),
+        ("11-2025", 5.3 + 0.6),
+        ("12-2025", 5.7 - 0.3),
+        ("01-2026", 6.0 + 0.8),
+        ("02-2026", 6.4 - 0.7),
+        ("03-2026", 6.8 + 0.4),        # ...existing code...
+    ]
+    labels = [row[0] for row in graph_data]
+    values = [row[1] for row in graph_data]
+        
+    # pass axis labels as strings
+    x_label = "Month"
+    y_label = "Average Score"
+
+    return render_template("graphs.html",
+                            labels=labels,
+                            values=values,
+                            x_label=x_label,
+                            y_label=y_label)
 
 @bp.route('/refresh-data', methods=['POST'])
 def refresh_data():
-    import os
-    from flask import jsonify
-
     messages = []
     coc_api_key = os.getenv("COC_API_KEY")
     clan_tag = "%23CQGY2LQU"

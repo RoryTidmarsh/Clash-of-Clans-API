@@ -81,6 +81,17 @@ body {
     width: calc(100vw - 80px);
     min-width: 320px;
 }
+
+.graph-container {
+    position: relative;
+    width: 90vw;
+    max-width: 90%;
+    margin: 0 auto 40px auto;
+    padding: 40px;
+    background: rgba(254, 253, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
 .pastel-red-title {
     color: #b71c1c; /* Deep red */
     background: #fff5f5; /* Pastel red background */
