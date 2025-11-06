@@ -1,13 +1,11 @@
 from flask import Blueprint, render_template, request, jsonify, Response
 from app.services.index_data import get_index_data
 from app.services.process_data import translate_columns, remove_columns,reorder_columns
-from app.services.Find_battletags import get_war_tags, wars_with_clan
+from app.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
 from app.services.reading_WarData import WarDataManager, get_war_stats
 import app.services.graphs as graphs
 import pandas as pd
 import os
-import json
-# from app.services.analysis import get_clan_progress, get_war_table, get_progress_graph_data
 from app.supabase_client import supabase
 
 bp = Blueprint('main', __name__)
@@ -109,10 +107,19 @@ def refresh_data():
         "Accept": "application/json",
         "authorization": "Bearer %s" % coc_api_key
     }  
+
     seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
     messages.append("CWL WAR TAGS FOUND")
+
     clan_war_tags, clan_war_states = wars_with_clan(seasonal_battle_tag_df)
     messages.append("CLAN ONLY WAR TAGS FOUND")
+
+    reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
+    for day, tag in clan_war_tags.items():
+        reduced_warTag_df = pd.concat([reduced_warTag_df, pd.DataFrame({"battleday": [day], "wartag": [tag], "season": [season]})], ignore_index=True)
+    # Update Supabase with new war tags
+    Update_Supabase_battle_tags(reduced_warTag_df)
+    messages.append("SUPABASE BATTLE TAGS UPDATED")
 
     war_manager = WarDataManager(status_table="war_status")
     total = sum(1 for tag in clan_war_tags.values() if tag != "#0")
