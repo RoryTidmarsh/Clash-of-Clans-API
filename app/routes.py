@@ -3,7 +3,7 @@ from app.services.index_data import get_index_data
 from app.services.process_data import translate_columns, remove_columns,reorder_columns
 from app.services.Find_battletags import get_war_tags, wars_with_clan
 from app.services.reading_WarData import WarDataManager, get_war_stats
-import app.services.graphs as graphs_service
+import app.services.graphs as graphs
 import pandas as pd
 import os
 import json
@@ -54,19 +54,39 @@ def war_table():
 def progress_graphs():
     # Placeholder route for progress graphs page
     # Generate noisy graph data
-    graph_data = [
-        ("05-2025", 2.9 + 0.7),
-        ("06-2025", 3.5 - 0.4),
-        ("07-2025", 4.0 + 0.9),
-        ("08-2025", 4.2 - 0.6),
-        ("09-2025", 4.8 + 0.5),
-        ("10-2025", 5.1 - 0.8),
-        ("11-2025", 5.3 + 0.6),
-        ("12-2025", 5.7 - 0.3),
-        ("01-2026", 6.0 + 0.8),
-        ("02-2026", 6.4 - 0.7),
-        ("03-2026", 6.8 + 0.4),        # ...existing code...
-    ]
+    y_variables = ["attack_stars", "defense_stars"]  # Example: multiple y variables
+    graph_data, labels = graphs.fetch_graph_data(y_variables, "season", player_filter=["rozzledog 72"])
+
+    # Prepare graph_data as a dict of {y_variable: [(season, value), ...]}
+    graph_data_dict = {}
+    for y_var in y_variables:
+        graph_data_dict[y_var] = list(graph_data[["season", y_var]].itertuples(index=False, name=None))
+
+    # Pass all y variables' data to the template
+    x_label = "Month"
+    y_label = "Value"
+
+    return render_template(
+        "graphs.html",
+        labels=labels,
+        graph_data_dict=graph_data_dict,
+        y_variables=y_variables,
+        x_label=x_label,
+        y_label=y_label
+    )
+    # graph_data = [
+    #     ("05-2025", 2.9 + 0.7),
+    #     ("06-2025", 3.5 - 0.4),
+    #     ("07-2025", 4.0 + 0.9),
+    #     ("08-2025", 4.2 - 0.6),
+    #     ("09-2025", 4.8 + 0.5),
+    #     ("10-2025", 5.1 - 0.8),
+    #     ("11-2025", 5.3 + 0.6),
+    #     ("12-2025", 5.7 - 0.3),
+    #     ("01-2026", 6.0 + 0.8),
+    #     ("02-2026", 6.4 - 0.7),
+    #     ("03-2026", 6.8 + 0.4),        # ...existing code...
+    # ]
     labels = [row[0] for row in graph_data]
     values = [row[1] for row in graph_data]
         
