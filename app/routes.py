@@ -7,6 +7,7 @@ import app.services.graphs as graphs
 import pandas as pd
 import os
 from app.supabase_client import supabase
+import json
 
 bp = Blueprint('main', __name__)
 
@@ -50,53 +51,20 @@ def war_table():
 
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():
-    # # Placeholder route for progress graphs page
-    # # Generate noisy graph data
-    # y_variables = ["attack_stars", "defense_stars"]  # Example: multiple y variables
-    # graph_data, labels = graphs.fetch_graph_data(y_variables, "season", player_filter=["rozzledog 72"])
+    # Example: one Y variable and optional player filter
+    y_vars = ["attack_stars"]
+    grouped_data, labels = graphs.fetch_graph_data(y_vars, x_variable="season", player_filter=None)
 
-    # # Prepare graph_data as a dict of {y_variable: [(season, value), ...]}
-    # graph_data_dict = {}
-    # for y_var in y_variables:
-    #     graph_data_dict[y_var] = list(graph_data[["season", y_var]].itertuples(index=False, name=None))
+    trial_data = pd.DataFrame({"season": ["2025-09", "2025-10","2025-11","2025-09","2025-11"], "name": ["rozzledog 72","rozzledog 72","rozzledog 72", "conan_1014", 'conan_1014'], "attack_stars": [2.7,2.6,1.65,3.0,1.5]})
 
-    # # Pass all y variables' data to the template
-    # x_label = "Month"
-    # y_label = "Value"
-
-    return render_template(
-        "graphs.html",
-        # labels=labels,
-        # graph_data_dict=graph_data_dict,
-        # y_variables=y_variables,
-        # x_label=x_label,
-        # y_label=y_label
-    )
-    # graph_data = [
-    #     ("05-2025", 2.9 + 0.7),
-    #     ("06-2025", 3.5 - 0.4),
-    #     ("07-2025", 4.0 + 0.9),
-    #     ("08-2025", 4.2 - 0.6),
-    #     ("09-2025", 4.8 + 0.5),
-    #     ("10-2025", 5.1 - 0.8),
-    #     ("11-2025", 5.3 + 0.6),
-    #     ("12-2025", 5.7 - 0.3),
-    #     ("01-2026", 6.0 + 0.8),
-    #     ("02-2026", 6.4 - 0.7),
-    #     ("03-2026", 6.8 + 0.4),        # ...existing code...
-    # ]
-    labels = [row[0] for row in graph_data]
-    values = [row[1] for row in graph_data]
-        
-    # pass axis labels as strings
-    x_label = "Month"
-    y_label = "Average Score"
-
+    # prepare Chart.js data for the first y variable (or loop if multiple)
+    chartjs_data = graphs.prepare_chartjs_data(trial_data, y_variable=y_vars[0], x_variable="season")
+    print("📊 Sending to template:", chartjs_data)  # Debug print
+    # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
-                            labels=labels,
-                            values=values,
-                            x_label=x_label,
-                            y_label=y_label)
+                           chartjs_data=chartjs_data,
+                           x_label="season",
+                           y_label=y_vars[0])
 
 @bp.route('/refresh-data', methods=['POST'])
 def refresh_data():

@@ -6,7 +6,6 @@ body {
     padding: 0;
     min-height: 100vh;
     font-family: 'Montserrat', Arial, sans-serif;
-    background-image: url('your-background-image.jpg'); /* Replace with the URL of your image */
     background-size: cover; /* Ensure the image covers the entire screen */
     background-position: center; /* Center the image */
     background-attachment: fixed; /* Make the background image stay fixed while scrolling */

@@ -97,14 +97,13 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
         season_value_map = dict(zip(player_data["season"], player_data[y_variable]))        # in form {"seaon": y_value,...}
 
         # Handle missing data and aligning with x_labels
-        data_values = np.empty_like(x_labels)
+        data_values = []
         for ind,season in enumerate(x_labels):
             value = season_value_map.get(season,None)
-            data_values[ind] = value
+            data_values.append(float(value) if value is not None else None)
 
         # Give a player a colour
         colour = colours[i % len(colours)]
-
         dataset = {
             "label": player, # Player name for legend
             "data": data_values, # Y-axis values aligned with x_labels

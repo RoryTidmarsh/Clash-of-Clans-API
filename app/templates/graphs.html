@@ -56,10 +56,47 @@
 
     <!-- GRAPH CONTAINER -->
     <section id="graph-section">
-        <div class="graph-container">
+        <h3>Performance Chart</h3>
+        
+        {% if chartjs_data %}
+        <!-- Chart will render here -->
+        <div class="graph-container" style="position: relative; height: 400px; margin: 20px 0;">
+            <div id="labels-display" style="margin-bottom:10px; color:#333;"></div>
+                <strong>Labels:</strong>
+                <span id="labels-list" style="margin-left:8px;"></span>
+            </div>
             <canvas id="lineChart"></canvas>
         </div>
+        {% else %}
+        <!-- Placeholder when no data -->
+        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+            <p style="font-size: 18px; color: #666;">
+                📊 No data to display
+            </p>
+            <p style="color: #888;">
+                Select players and apply filters to generate the graph
+            </p>
+        </div>
+        {% endif %}
     </section>
 </div>
+
+<!-- load your static JS which expects chartData to exist -->
+<script src="{{ url_for('static', filename='graphs.js') }}"></script>
+<script>
+    // 🎓 Step 1: Receive data from Flask/Jinja2
+    // The '|safe' filter tells Jinja2 not to escape the JSON
+    // Without it, quotes would become &quot; and break the JavaScript
+    {% if chartjs_data %}
+        window.chartData = {{ chartjs_data | safe}};
+        console.log("📊 Chart Data Received:", chartData);
+        console.log("📅 Labels (X-axis):", chartData.labels);
+        console.log("👥 Number of players:", chartData.datasets.length);
+    {% else %}
+        window.chartData = null;
+        console.log("⚠️ No chart data available");
+    {% endif %}
+</script>
+
 
 {% endblock %}
