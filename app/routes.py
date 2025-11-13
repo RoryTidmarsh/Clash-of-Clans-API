@@ -50,27 +50,27 @@ def war_table():
 
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():
-    # Placeholder route for progress graphs page
-    # Generate noisy graph data
-    y_variables = ["attack_stars", "defense_stars"]  # Example: multiple y variables
-    graph_data, labels = graphs.fetch_graph_data(y_variables, "season", player_filter=["rozzledog 72"])
+    # # Placeholder route for progress graphs page
+    # # Generate noisy graph data
+    # y_variables = ["attack_stars", "defense_stars"]  # Example: multiple y variables
+    # graph_data, labels = graphs.fetch_graph_data(y_variables, "season", player_filter=["rozzledog 72"])
 
-    # Prepare graph_data as a dict of {y_variable: [(season, value), ...]}
-    graph_data_dict = {}
-    for y_var in y_variables:
-        graph_data_dict[y_var] = list(graph_data[["season", y_var]].itertuples(index=False, name=None))
+    # # Prepare graph_data as a dict of {y_variable: [(season, value), ...]}
+    # graph_data_dict = {}
+    # for y_var in y_variables:
+    #     graph_data_dict[y_var] = list(graph_data[["season", y_var]].itertuples(index=False, name=None))
 
-    # Pass all y variables' data to the template
-    x_label = "Month"
-    y_label = "Value"
+    # # Pass all y variables' data to the template
+    # x_label = "Month"
+    # y_label = "Value"
 
     return render_template(
         "graphs.html",
-        labels=labels,
-        graph_data_dict=graph_data_dict,
-        y_variables=y_variables,
-        x_label=x_label,
-        y_label=y_label
+        # labels=labels,
+        # graph_data_dict=graph_data_dict,
+        # y_variables=y_variables,
+        # x_label=x_label,
+        # y_label=y_label
     )
     # graph_data = [
     #     ("05-2025", 2.9 + 0.7),

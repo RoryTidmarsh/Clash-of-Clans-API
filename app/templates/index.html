@@ -6,12 +6,7 @@
 <div class="main-data-box">
     <section id="filters">
         <form method="get" action="/">
-            <label for="season">Season:</label>
-            <select name="season" id="season">
-                {% for season in filters.seasons %}
-                <option value="{{ season }}" {% if filters.selected_season == season %}selected{% endif %}>{{ season }}</option>
-                {% endfor %}
-            </select>
+            
             <label for="player">Player:</label>
             <select name="player" id="player">
                 <option value="">All</option>

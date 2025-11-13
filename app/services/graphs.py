@@ -48,6 +48,84 @@ def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     
     return grouped_data, labels
 
+def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colours = None):
+    """
+    Prepares data in a format suitable for Chart.js.
+
+    Args:
+        grouped_data (DataFrame): The grouped data containing x and y variables.
+        y_variable (str): The Y-axis variable to plot.
+        x_variable (str): The X-axis variable to plot. Default is "season".
+        colours (list): List of colours for each player. Defaults to None.
+
+    Returns:
+        dict: A dictionary formatted for Chart.js consumption.
+    """
+    if x_variable not in grouped_data.columns:
+        raise ValueError(f"x_variable '{x_variable}' not in data columns")
+    if y_variable not in grouped_data.columns:
+        raise ValueError(f"y_variable '{y_variable}' not in data columns")
+    if grouped_data.empty:
+        raise ValueError("grouped_data is empty")
+
+    # Get unique x labels
+    x_labels = sorted(grouped_data[x_variable].unique())
+    print("Step 1 - X Labels:", x_labels)
+    # Unique player names
+    player_names = grouped_data["name"].unique()
+    print("Step 2 - Players:", player_names)
+    
+    # Colour pallette for multiple lines
+    if colours is None:
+        colours = [
+            "#6d6ed6",  # Purple (your theme color)
+            "#4c4cab",  # Darker purple
+            "#a993fe",  # Light purple
+            "#ff6b6b",  # Red
+            "#51cf66",  # Green
+            "#339af0",  # Blue
+            "#ff922b",  # Orange
+            "#f06595",  # Pink
+        ]
+    
+    datasets = []
+    for i, player in enumerate(player_names):
+        # Fileter data for current player
+        player_data = grouped_data[grouped_data["name"]==player]
+
+        # access data into dictionary form
+        season_value_map = dict(zip(player_data["season"], player_data[y_variable]))        # in form {"seaon": y_value,...}
+
+        # Handle missing data and aligning with x_labels
+        data_values = np.empty_like(x_labels)
+        for ind,season in enumerate(x_labels):
+            value = season_value_map.get(season,None)
+            data_values[ind] = value
+
+        # Give a player a colour
+        colour = colours[i % len(colours)]
+
+        dataset = {
+            "label": player, # Player name for legend
+            "data": data_values, # Y-axis values aligned with x_labels
+            "borderColor": colour, # Line color
+            "backgroundColor": "#ffffff00", # Transparent fill
+            "fill": False, # No fill under the line
+            "tension":0.1, # Smooth curves
+            "pointRadius":4, # Point size
+            "pointHoverRadius":6, # Point size on hover
+            "spanGaps": False  # Do not connect gaps in data
+        }
+
+        datasets.append(dataset)
+    
+    chartjs_data = {
+        "labels": x_labels,
+        "datasets": datasets
+    }
+    return chartjs_data
+            
+
 
 if __name__ == "__main__":
     # Example usage
@@ -55,4 +133,9 @@ if __name__ == "__main__":
     graph_data, labels = fetch_graph_data(y_vars, x_variable="season", player_filter = ["rozzledog 72", "conan_1014"])
 
     graph_data, labels = fetch_graph_data(["attack_stars"], "season", player_filter = ["rozzledog 72", "conan_1014"])
-    print(graph_data.tolist())
+    
+
+    trial_data = pd.DataFrame({"season": ["2025-09", "2025-10","2025-11","2025-09","2025-11"], "name": ["rozzledog 72","rozzledog 72","rozzledog 72", "conan_1014", 'conan_1014'], "attack_stars": [2.7,2.6,1.65,3.0,1.5]})
+    # print(trial_data)
+    chartjs_data = prepare_chartjs_data(trial_data, "attack_stars")
+    print(chartjs_data)
