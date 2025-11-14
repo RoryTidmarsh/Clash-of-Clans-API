@@ -28,12 +28,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
         lineChart = new Chart(ctx, {
             type: 'line',
-            labels: chartData.labels,
-            data: chartData.datasets,
+            data: {
+                labels: chartData.labels,
+                datasets: chartData.datasets
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
                 aspectRatio: 2,
+                scales: {                  // axis labels
+                    xAxes: [{
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Season'
+                        }
+                    }],
+                    yAxes: [{
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Attack Stars'
+                        },
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
             }
         });
     };
