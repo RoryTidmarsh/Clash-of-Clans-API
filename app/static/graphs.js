@@ -88,7 +88,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('📝 Selection updated:', selected);
     }
 
-
+    // ============================================
+    // CHART FUNCTIONALLITY
+    // ============================================
     if (!chartData) {
         console.error('No chart data found!');
         return; // Exit early
@@ -139,7 +141,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // Check if chart data exists (from Flask)
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    // GRAPH INITIALIZATION
     if (window.chartData) {
         console.log('✅ Initializing chart with data from window object');
         initialiseLineChart(window.chartData);
@@ -147,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('❌ No chart data found on window object');
     
     }
+    // FILTER DISPLAY INITIALIZATION
     if (playerCheckboxes.length > 0) {
         updateFilterDisplay();
         console.log('✅ Initial filter display updated');
