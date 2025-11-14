@@ -305,7 +305,13 @@ section h2 {
     font-size: 0.95em;
     white-space: nowrap;
 }
-
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+}
 /* === MULTI-SELECT DROPDOWN === */
 .multi-select-dropdown {
     flex: 1;
@@ -317,54 +323,64 @@ section h2 {
 /* Trigger Button */
 .multi-select-trigger {
     width: 100%;
-    padding: 10px 12px;
-    background: #f5f7ff;
-    border: 1px solid #d1d9ff;
-    border-radius: 8px;
+    padding: 10px 15px;
+    background: white;
+    border: 2px solid #6d6ed6;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-size: 0.9em;
-    color: #6d6ed6;
-    transition: all 0.2s;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
 .multi-select-trigger:hover {
-    background: #eff1ff;
-    border-color: #a993fe;
+    background: #f8f8ff;
+    border-color: #5a5bb5;
 }
 
 .dropdown-arrow {
-    font-size: 0.8em;
-    transition: transform 0.2s;
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+    color: #6d6ed6;
+    font-weight: bold;
 }
 
 .multi-select-trigger.active .dropdown-arrow {
     transform: rotate(180deg);
 }
-.button-group {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    width: 100%;
-}
+
 /* Dropdown Panel */
 .multi-select-panel {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 5px);
     left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #d1d9ff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(109, 110, 214, 0.15);
-    max-height: 250px;
+    width: 100%;
+    max-height: 300px;
     overflow-y: auto;
+    background: white;
+    border: 2px solid #6d6ed6;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
-    display: none; /* Hidden by default */
+    display: none;  /* Hidden by default */
+}
+
+.multi-select-panel.show {
+    display: block !important;  /* !important to override any conflicts */
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .multi-select-panel.active {
@@ -384,7 +400,6 @@ section h2 {
 .multi-select-option:hover {
     background: #f5f7ff;
 }
-
 .multi-select-option input[type="checkbox"] {
     margin-right: 10px;
     cursor: pointer;
@@ -399,8 +414,8 @@ section h2 {
 
 /* Select All Option */
 .select-all-option {
-    background: #f5f7ff;
     font-weight: 600;
+    background: #f9f9ff;
 }
 
 .select-all-option span {

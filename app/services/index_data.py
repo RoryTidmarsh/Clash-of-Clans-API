@@ -96,9 +96,25 @@ def find_mostRecent_season():
         return response.data[0]['season']
     return None
 
+def get_all_players():
+    """
+    Fetch all unique player names from the database
+    Returns a list of player names
+    """    
+    try:
+        response = supabase.table('war_data').select('name').execute()
+        
+        # Extract unique names
+        players = list(set([row['name'] for row in response.data]))
+        return players
+    except Exception as e:
+        raise ValueError(f"Error fetching player names: {e}")
+
 
 if __name__ == "__main__":
     season = find_mostRecent_season()
     data = get_index_data(season_filter=season)
     
     print(f"Recent stats for season {season}: \n{type(data['recent_stats'])} \n{data['recent_stats'][0]}")
+
+    print("Players:", get_all_players())

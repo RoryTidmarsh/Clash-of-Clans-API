@@ -1,13 +1,13 @@
 from flask import Blueprint, render_template, request, jsonify, Response
-from app.services.index_data import get_index_data
-from app.services.process_data import translate_columns, remove_columns,reorder_columns
+import app.services.index_data as index_data
+import app.services.process_data as process_data
 from app.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
 from app.services.reading_WarData import WarDataManager, get_war_stats
 import app.services.graphs as graphs
 import pandas as pd
 import os
 from app.supabase_client import supabase
-import json
+
 
 bp = Blueprint('main', __name__)
 
@@ -18,11 +18,11 @@ def index():
     player_filter = request.args.get("player")  # Get the "player" query parameter, if provided
 
     # Fetch raw data
-    page_data = get_index_data(season_filter, player_filter)
+    page_data = index_data.get_index_data(season_filter, player_filter)
 
     # Translate and reorder columns
-    page_data["recent_stats"] = translate_columns(reorder_columns(remove_columns(page_data["recent_stats"], ["season"])))
-    page_data["all_time_stats"] = translate_columns(reorder_columns(remove_columns(page_data["all_time_stats"], ["season"])))
+    page_data["recent_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["recent_stats"], ["season"])))
+    page_data["all_time_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["all_time_stats"], ["season"])))
     
     # print(reorder_columns(page_data["recent_stats"][0]))
     
@@ -51,20 +51,78 @@ def war_table():
 
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():
-    # Example: one Y variable and optional player filter
-    y_vars = ["attack_stars"]
+
+    # Create filter options for statistic to display
+    # stats to drop from available options
+    drop_stats = {"tag", "name", "attacker_tag", "defender_tag", "wartag", "battleday", "season", "townhallLevel", "opponent_townhallLevel"}
+
+    # Build available_stats from COLUMNTRANSLATIONS excluding drop_stats
+    available_stats = [
+        {"value": key, "label": (label or key)}
+        for key, label in process_data.COLUMN_TRANSLATIONS.items()
+        if key not in drop_stats
+    ]
+
+    # Fetch all players for filter options
+    all_players = index_data.get_all_players()
+    print(f"All players for filter: {all_players}")
+    # Load the real data
+    y_vars = ["attack_stars"] # Default Y variable(s)
     grouped_data, labels = graphs.fetch_graph_data(y_vars, x_variable="season", player_filter=None)
 
+    # trial data for testing
     trial_data = pd.DataFrame({"season": ["2025-09", "2025-10","2025-11","2025-09","2025-11"], "name": ["rozzledog 72","rozzledog 72","rozzledog 72", "conan_1014", 'conan_1014'], "attack_stars": [2.7,2.6,1.65,3.0,1.5]})
 
     # prepare Chart.js data for the first y variable (or loop if multiple)
-    chartjs_data = graphs.prepare_chartjs_data(trial_data, y_variable=y_vars[0], x_variable="season")
-    print("📊 Sending to template:", chartjs_data)  # Debug print
+    chartjs_data = graphs.prepare_chartjs_data(grouped_data, y_variable=y_vars[0], x_variable="season")
+    
     # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
                            chartjs_data=chartjs_data,
                            x_label="season",
-                           y_label=y_vars[0])
+                           y_label=process_data.COLUMN_TRANSLATIONS.get(y_vars[0]),
+                           all_players = all_players,
+                           available_stats = available_stats)
+
+@bp.route('/api/graph-data', methods=['GET'])
+def get_graph_data():
+    """API endpoint to fetch graph data based on query parameters.
+    
+    ARGS:
+        y_vars (list): List of Y variable names to plot.
+        x_variable (str): X variable name.
+        player_filter (list): List of player names to filter data.
+    """
+    # Get parameters
+    selected_players = request.args.getlist("selected_players")  # List of player names
+    selected_stat = request.args.get("stat", "attack_stars")  # Y variable
+
+    print(f"📊 API Request Received:")
+    print(f"  - Players: {selected_players}")
+    print(f"  - Stat: {selected_stat}")
+
+    try:
+        # Fetch and prepare graph data
+        grouped_data, labels = graphs.fetch_graph_data(
+            y_variables=[selected_stat],
+            x_variable="season",
+            player_filter=selected_players if selected_players else None
+        )
+
+        # Prepare Chart.js data
+        chartjs_data = graphs.prepare_chartjs_data(
+            grouped_data,
+            y_variable=selected_stat,
+            x_variable="season"
+        )
+
+        return jsonify(chartjs_data)
+    
+    except Exception as e:
+        print(f"❌ Error in API: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @bp.route('/refresh-data', methods=['POST'])
 def refresh_data():

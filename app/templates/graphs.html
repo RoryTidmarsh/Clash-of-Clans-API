@@ -15,26 +15,36 @@
                 <span id="filter-select">Select players</span>
                 <span class="dropdown-arrow">▼</span>
             </button> 
-            
             <div class="multi-select-panel" id="player-panel">
                 <div>
                     <label class="multi-select-option select-all-option">
-                        <input type="checkbox" id="select-all-players">
+                        <input type="checkbox" id="select-all-players" checked>
                         <span>Select All</span>
                     </label>
                     <hr class="multi-select-divider">
+                    
+                    <script>
+                        console.log("🐍 all_players from Flask:", {{ all_players | tojson }});
+                        console.log("🐍 Type of all_players:", {{all_players|length}});
+                    </script>
+                    {% if all_players %}
+                        {% for player in all_players %}
+                        <label class="multi-select-option">
+                            <input 
+                                type="checkbox" 
+                                class="player-checkbox" 
+                                value="{{ player }}"
+                                
+                            >
+                            <span>{{ player }}</span>
+                        </label>
+                        {% endfor %}
 
-                    {% for player in all_players %}
-                    <label class="multi-select-option">
-                        <input 
-                            type="checkbox" 
-                            class="player-checkbox" 
-                            value="{{ player }}"
-                            checked
-                        >
-                        <span>{{ player }}</span>
-                    </label>
-                    {% endfor %}
+                    {% else %}
+                        <div style="padding: 10px; color: red;">
+                            ⚠️ No players found!
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -48,8 +58,8 @@
             {% endfor %}
         </select>
 
-        <button id="apply-filters" type="button">Apply Filters</button>
-        <button id="reset-filters" type="button">Reset Filters</button>
+        <button id="apply-filters" type="button">Apply</button>
+        <button id="reset-filters" type="button">Reset</button>
     </section>
 
     <hr>
@@ -65,7 +75,7 @@
         </div>
         {% else %}
         <!-- Placeholder when no data -->
-        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(216, 213, 213, 0.968); border-radius: 8px;">
             <p style="font-size: 18px; color: #666;">
                 📊 No data to display
             </p>

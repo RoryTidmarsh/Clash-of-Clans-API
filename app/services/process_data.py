@@ -23,32 +23,6 @@ COLUMN_TRANSLATIONS = {
     "wartag": "🏷️ War Tag",
 }
 
-
-import pandas as pd
-
-# Universal dictionary for column translations with user-friendly names and emojis
-COLUMN_TRANSLATIONS = {
-    "tag": "🏷️ Tag",
-    "name": "👤 Player",
-    "townhallLevel": "🏰 Townhall Level",
-    "mapPosition": "🗺️ Map Position",
-    "attacker_townhallLevel": "⚔️ Att TH Level",
-    "defender_townhallLevel": "🛡️ Def TH Level",
-    "attack_th_diff": "⚔️ Att TH Diff",
-    "defense_th_diff": "🛡️ Def TH Diff",
-    "attack_stars": "⭐ Att Stars",
-    "attack_percentage": "📊 Att %",
-    "attack_duration": "⏱️ Att Duration (s)",
-    "defender_tag": "🏷️ Def Tag",
-    "defense_stars": "⭐ Def Stars",
-    "defense_percentage": "📉 Def %",
-    "defense_duration": "⏱️ Def Duration (s)",
-    "attacker_tag": "🏷️ Att Tag",
-    "season": "📅 Season",
-    "battleday": "🔥 Battle Day",
-    "wartag": "🏷️ War Tag",
-}
-
 # Column order priority - columns will appear in this order if present
 COLUMN_ORDER_PRIORITY = [
     "name",                # Player name should always come first
@@ -141,3 +115,15 @@ def remove_columns(data, columns_to_remove):
             {key: value for key, value in row.items() if key not in columns_to_remove}
             for row in data
         ]
+    
+if __name__ == "__main__":
+    # Example: one Y variable and optional player filter
+    drop_stats = {"tag", "attacker_tag", "defender_tag", "wartag", "battleday", "season", "townhallLevel", "opponent_townhallLevel"}
+
+    # Build available_stats from COLUMNTRANSLATIONS excluding drop_stats
+    available_stats = [
+        {"value": key, "label": (label or key)}
+        for key, label in COLUMN_TRANSLATIONS.items()
+        if key not in drop_stats
+    ]
+    print(available_stats)
