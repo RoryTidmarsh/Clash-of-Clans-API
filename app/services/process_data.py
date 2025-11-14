@@ -116,6 +116,13 @@ def remove_columns(data, columns_to_remove):
             for row in data
         ]
     
+def get_priority_index(stat):
+    """Returns position in COLUMN_ORDER_PRIORITY, or a large number if not found."""
+    try:
+        return COLUMN_ORDER_PRIORITY.index(stat["value"])
+    except ValueError:
+        return 999  # Put unknown stats at the end
+
 if __name__ == "__main__":
     # Example: one Y variable and optional player filter
     drop_stats = {"tag", "attacker_tag", "defender_tag", "wartag", "battleday", "season", "townhallLevel", "opponent_townhallLevel"}

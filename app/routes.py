@@ -62,6 +62,7 @@ def progress_graphs():
         for key, label in process_data.COLUMN_TRANSLATIONS.items()
         if key not in drop_stats
     ]
+    available_stats.sort(key=process_data.get_priority_index)
 
     # Fetch all players for filter options
     all_players = index_data.get_all_players()

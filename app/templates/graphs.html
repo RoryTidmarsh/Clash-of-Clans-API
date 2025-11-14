@@ -4,9 +4,6 @@
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
-<div class="progress-graphs pastel-red-title">
-    <h1>This feature is under development. Check back later!</h1>
-</div>
 <div class="main-data-box">
     <section id="filters">
         <label for="player">Players:</label>
@@ -34,7 +31,7 @@
                                 type="checkbox" 
                                 class="player-checkbox" 
                                 value="{{ player }}"
-                                
+                                checked
                             >
                             <span>{{ player }}</span>
                         </label>
@@ -58,15 +55,15 @@
             {% endfor %}
         </select>
 
-        <button id="apply-filters" type="button">Apply</button>
-        <button id="reset-filters" type="button">Reset</button>
+        <button id="apply-filters" type="button" class = "filter-button">Apply</button>
+        <button id="reset-filters" type="button" class = "filter-button">Reset</button>
     </section>
 
     <hr>
 
     <!-- GRAPH CONTAINER -->
     <section id="graph-section">
-        <h3>Performance Chart</h3>
+        <h2>Performance Chart</h2>
         
         {% if chartjs_data %}
         <!-- Chart will render here -->

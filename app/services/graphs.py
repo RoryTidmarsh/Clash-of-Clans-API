@@ -79,14 +79,17 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
     if colours is None:
         colours = [
             "#6d6ed6",  # Purple (your theme color)
-            "#4c4cab",  # Darker purple
+            "#51cf66",  # Green
+            "#f06595",  # Pink
             "#a993fe",  # Light purple
             "#ff6b6b",  # Red
-            "#51cf66",  # Green
             "#339af0",  # Blue
+            "#4c4cab",  # Darker purple
             "#ff922b",  # Orange
-            "#f06595",  # Pink
+            
         ]
+
+    markers = ['circle','cross', 'star','triangle', 'rect',  'diamond', 'plus', 'heart']
     
     datasets = []
     for i, player in enumerate(player_names):
@@ -100,19 +103,33 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
         data_values = []
         for ind,season in enumerate(x_labels):
             value = season_value_map.get(season,None)
-            data_values.append(float(value) if value is not None else None)
+            if value is None:
+                data_values.append(None)
+            else:
+                try:
+                    data_values.append(float("{:.3g}".format(float(value))))
+                except (ValueError, TypeError):
+                    data_values.append(None)
 
-        # Give a player a colour
-        colour = colours[i % len(colours)]
+        # Cycle through colours; when we wrap to a new colour-set (cycle), change markers.
+        cycle = i // len(colours)
+        colour_index = i % len(colours)
+        colour = colours[colour_index]
+        # Shift marker selection by the cycle number so each colour-cycle uses a different marker set
+        marker = markers[(colour_index + cycle) % len(markers)]
         dataset = {
             "label": player, # Player name for legend
             "data": data_values, # Y-axis values aligned with x_labels
             "borderColor": colour, # Line color
-            "backgroundColor": "#ffffff00", # Transparent fill
+            "backgroundColor": colour, # Point fill color (not transparent)
+            "pointStyle": marker,  # Marker style
+            "pointBackgroundColor": colour, # Explicit point color
+            "pointBorderWidth": 2, # Border width around points
             "fill": False, # No fill under the line
-            "tension":0.1, # Smooth curves
-            "pointRadius":4, # Point size
-            "pointHoverRadius":6, # Point size on hover
+            "tension": 0.1, # Smooth curves
+            "pointRadius": 6, # Larger point size (was 4)
+            "pointHoverRadius": 8, # Larger on hover (was 6)
+            "pointHitRadius": 10, # Larger click area
             "spanGaps": False  # Do not connect gaps in data
         }
 

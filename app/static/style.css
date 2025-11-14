@@ -197,6 +197,15 @@ section h2 {
     color: #fff;
 }
 
+/* Add this new hover state for select */
+#filters select:hover {
+    background: #afb8e2;  /* Slightly darker on hover */
+    border-color: #a0ace5;
+    color: #383acd;
+    cursor: pointer;
+}
+
+
 /* --- Responsive --- */
 @media (max-width: 1200px) {
     .main-data-box {
@@ -318,34 +327,37 @@ section h2 {
     min-width: 150px;
     max-width: 200px;
     position: relative;
+    color:#6d6ed6;
 }
 
 /* Trigger Button */
-.multi-select-trigger {
+#filters .multi-select-trigger {
     width: 100%;
     padding: 10px 15px;
-    background: white;
-    border: 2px solid #6d6ed6;
-    border-radius: 6px;
+    background: #f5f7ff;  /* Match the stats dropdown background */
+    border: 1px solid #d1d9ff;  /* Match the stats dropdown border */
+    border-radius: 16px;  /* Match the stats dropdown border radius */
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 14px;
     font-weight: 500;
+    color: #6d6ed6;
     transition: all 0.3s ease;
 }
 
-.multi-select-trigger:hover {
-    background: #f8f8ff;
-    border-color: #5a5bb5;
+#filters .multi-select-trigger:hover {
+    background: #afb8e2;  /* Slightly darker on hover */
+    border-color: #a0ace5;
+    color: #383acd;
 }
-
 .dropdown-arrow {
     margin-left: 10px;
     transition: transform 0.3s ease;
     color: #6d6ed6;
-    font-weight: bold;
+    font-weight: normal;  /* Change from bold */
+    font-size: 0.8em;  /* Smaller arrow */
 }
 
 .multi-select-trigger.active .dropdown-arrow {
@@ -361,11 +373,12 @@ section h2 {
     max-height: 300px;
     overflow-y: auto;
     background: white;
-    border: 2px solid #6d6ed6;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 1px solid #d1d9ff;  /* Match the lighter border */
+    border-radius: 8px;  /* Slightly rounder */
+    box-shadow: 0 4px 12px rgba(109, 110, 214, 0.15);  /* Softer shadow */
+    color: #6d6ed6;
     z-index: 1000;
-    display: none;  /* Hidden by default */
+    display: none;
 }
 
 .multi-select-panel.show {
@@ -405,6 +418,7 @@ section h2 {
     cursor: pointer;
     width: 16px;
     height: 16px;
+    color: #6d6ed6;
 }
 
 .multi-select-option span {
@@ -420,6 +434,12 @@ section h2 {
 
 .select-all-option span {
     color: #6d6ed6;
+}
+
+.select-all-option:hover {
+    background: #afb8e2;  /* Slightly darker on hover */
+    border-color: #a0ace5;
+    color: #383acd;
 }
 
 .multi-select-divider {
@@ -494,7 +514,7 @@ section h2 {
 /* === GRAPH CONTAINER === */
 .graph-container {
     flex: 1;
-    background: rgba(254, 253, 255, 0.05);
+    background: rgba(254, 253, 255, 0.792);
     border-radius: 16px;
     padding: 30px;
     box-shadow: 0 4px 16px rgba(180, 180, 200, 0.15);
