@@ -89,7 +89,7 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
             
         ]
 
-    markers = ['circle','cross', 'star','triangle', 'rect',  'diamond', 'plus', 'heart']
+    markers = ['circle','star','cross','triangle', 'rect',  'diamond', 'plus', 'heart']
     
     datasets = []
     for i, player in enumerate(player_names):
@@ -116,7 +116,7 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
         colour_index = i % len(colours)
         colour = colours[colour_index]
         # Shift marker selection by the cycle number so each colour-cycle uses a different marker set
-        marker = markers[(colour_index + cycle) % len(markers)]
+        marker = markers[cycle % len(markers)]
         dataset = {
             "label": player, # Player name for legend
             "data": data_values, # Y-axis values aligned with x_labels
