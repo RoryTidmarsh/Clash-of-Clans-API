@@ -102,6 +102,48 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedOption = statDropdown.querySelector(`option[value="${statValue}"]`);
             return selectedOption ? selectedOption.textContent : statValue;
         }
+    
+    // Shared chart configuration function
+    function getChartConfig(chartData, yAxisLabel = null) {
+        return {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: chartData.datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                scales: {
+                    xAxes: [{
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Season'
+                        }
+                    }],
+                    yAxes: [{
+                        scaleLabel: {
+                            display: true,
+                            labelString: yAxisLabel || window.yLabel || "Attack Stars"
+                        },
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        fontSize: 13
+                    }
+                }
+            }
+        };
+    }
     function updateChart(selectedPlayers, selectedStat) {
         console.log('🔄 Updating chart with:', { selectedPlayers, selectedStat });
         
@@ -133,41 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Get the Y-axis label for the selected stat
                 const yAxisLabel = getYAxisLabel(selectedStat);
                 
-                // Create new chart with updated data
+                // Create new chart with updated data using shared configuration
                 const ctx = document.getElementById('lineChart').getContext('2d');
-                lineChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: newChartData.labels,
-                        datasets: newChartData.datasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        aspectRatio: 2,
-                        scales: {
-                            xAxes: [{
-                                scaleLabel: {
-                                    display: true,
-                                    labelString: 'Season'
-                                }
-                            }],
-                            yAxes: [{
-                                scaleLabel: {
-                                    display: true,
-                                    labelString: yAxisLabel  // Dynamic label!
-                                },
-                                ticks: {
-                                    beginAtZero: true
-                                }
-                            }]
-                        },
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        }
-                    }
-                });
+                lineChart = new Chart(ctx, getChartConfig(newChartData, yAxisLabel));
                 
                 // Remove loading state
                 graphSection.style.opacity = '1';
@@ -183,63 +193,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function initialiseLineChart(chartData) {
         const ctx = document.getElementById('lineChart').getContext('2d');
 
-        // 3. Log what we received
+        // Log what we received
         console.log('📊 Chart data received:');
         console.log('  Labels:', chartData.labels);
         console.log('  Datasets:', chartData.datasets.length, 'players');
 
-        lineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: chartData.datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2,
-                scales: {                  // axis labels
-                    xAxes: [{
-                        scaleLabel: {
-                            display: true,
-                            labelString: 'Season'
-                        }
-                    }],
-                    yAxes: [{
-                        scaleLabel: {
-                            display: true,
-                            labelString: window.yLabel || "Attack Stars"  // Default label
-                        },
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
-                },
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        
-                        padding:15,
-                        fontSize:13,
-                        // generateLabels: function(chart) {
-                        //     // Custom legend to show both line and point
-                        //     return chart.data.datasets.map(function(dataset, i) {
-                        //         return {
-                        //             text: dataset.label,
-                        //             fillStyle: dataset.borderColor,        // Color of the marker
-                        //             strokeStyle: dataset.borderColor,      // Border color
-                        //             lineWidth: 2,                           // Line thickness in legend
-                        //             hidden: !chart.isDatasetVisible(i),
-                        //             index: i
-                        //         };
-                        //     });
-                        // }
-                    }
-                    }
-            }
-        });
+        // Create chart using shared configuration
+        lineChart = new Chart(ctx, getChartConfig(chartData));
     };
 
     // ============================================
