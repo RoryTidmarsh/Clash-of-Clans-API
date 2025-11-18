@@ -110,6 +110,19 @@ def get_all_players():
     except Exception as e:
         raise ValueError(f"Error fetching player names: {e}")
 
+def get_all_seasons():
+    """
+    Fetch all unique seasons from the database
+    Returns a list of seasons
+    """    
+    try:
+        response = supabase.table('war_data').select('season').execute()
+        
+        # Extract unique seasons
+        seasons = list(set([row['season'] for row in response.data]))
+        return seasons
+    except Exception as e:
+        raise ValueError(f"Error fetching seasons: {e}")
 
 if __name__ == "__main__":
     season = find_mostRecent_season()

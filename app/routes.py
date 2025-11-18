@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, Response
 import app.services.index_data as index_data
 import app.services.process_data as process_data
 from app.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
+import app.services.full_table as full_table
 from app.services.reading_WarData import WarDataManager, get_war_stats
 import app.services.graphs as graphs
 import pandas as pd
@@ -42,12 +43,57 @@ def coming_soon():
 
 @bp.route('/war-table', methods=['GET'])
 def war_table():
-    # Placeholder route for war table page
-    war_data = [
-        {"name": "War Data 1", "detail": "Details about War Data 1"},
-        {"name": "War Data 2", "detail": "Details about War Data 2"}
-    ]
-    return render_template("war_table.html", war_data=war_data)
+    # Handle multiple players from multi-select dropdown
+    selected_players = request.args.getlist("player")  # Get list of selected players
+    season_filter = request.args.get("season")  # Get the "season" query parameter, if provided
+    
+    # Convert list to single value for backward compatibility with existing functions
+    # If multiple players selected, pass the list; if single or none, pass as string
+    if len(selected_players) == 1:
+        player_filter = selected_players[0]
+    elif len(selected_players) > 1:
+        player_filter = selected_players  # Pass as list
+    else:
+        player_filter = None
+
+    war_data = full_table.get_full_table_data(season_filter, player_filter)
+    war_data = process_data.translate_columns(process_data.reorder_columns(war_data))
+    
+    # Convert DataFrame to list of dictionaries for template compatibility
+    if hasattr(war_data, 'to_dict'):
+        # It's a pandas DataFrame
+        war_data_list = war_data.to_dict('records')  # Convert to list of dicts
+        columns = list(war_data.columns)  # Get column names
+    elif isinstance(war_data, list) and len(war_data) > 0:
+        # It's already a list of dicts
+        war_data_list = war_data
+        columns = list(war_data[0].keys()) if war_data else []
+    else:
+        # Handle empty or unexpected data
+        war_data_list = []
+        columns = []
+    
+    # Get all available options for dropdowns
+    all_players = index_data.get_all_players()
+    all_seasons = index_data.get_all_seasons()
+    
+    # Create filter objects that match template expectations
+    player_filter_obj = {'players': all_players}
+    season_filter_obj = {'season': all_seasons}
+    
+    # Create filters object for tracking selections
+    filters_obj = {
+        'selected_players': selected_players,
+        'selected_season': season_filter
+    }
+
+    return render_template("war_data.html",
+        war_data=war_data_list,
+        columns=columns,
+        player_filter=player_filter_obj,
+        season_filter=season_filter_obj,
+        filters=filters_obj
+        )
 
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():

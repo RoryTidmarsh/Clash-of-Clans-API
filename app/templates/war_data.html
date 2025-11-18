@@ -1,14 +1,189 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clash of Clans API</title>
-    <link rel="stylesheet" href="../static/styles.css">
-    <link rel="icon" type="image/png" href="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png">
-</head>
-<body>
-    <button class="refresh-btn pastel-red-title .pastel-red-title:hover" onclick="location.reload()">
-        &#x21bb; Coming soon
-    </button>
-</body>
+{% extends "base.html" %}
+
+{% block title %}Clan War League Stats - Pussay Palace{% endblock %}
+
+{% block content %}
+<div class="main-data-box">
+    <section id="filters">
+        <form method="get" action="/war-table">
+            
+            <label for="player">Players:</label>
+            <div class="multi-select-dropdown" style="display: inline-block; min-width: 200px;">
+                <button type="button" class="multi-select-trigger" id="player-trigger">
+                    <span id="filter-select">Select players</span>
+                    <span class="dropdown-arrow">▼</span>
+                </button> 
+                <div class="multi-select-panel" id="player-panel">
+                    <div>
+                        <label class="multi-select-option select-all-option">
+                            <input type="checkbox" id="select-all-players" checked>
+                            <span>Select All</span>
+                        </label>
+                        <hr class="multi-select-divider">
+                        
+                        {% if player_filter.players %}
+                            {% for player in player_filter.players %}
+                            <label class="multi-select-option">
+                                <input 
+                                    type="checkbox" 
+                                    class="player-checkbox" 
+                                    name="player"
+                                    value="{{ player }}"
+                                    {% if not filters.selected_players or player in filters.selected_players %}checked{% endif %}
+                                >
+                                <span>{{ player }}</span>
+                            </label>
+                            {% endfor %}
+                        {% else %}
+                            <div style="padding: 10px; color: red;">
+                                ⚠️ No players found!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <label for="season">Season:</label>
+            <select name="season" id="season">
+                <option value="">All</option>
+                {% for season in season_filter.season %}
+                <option value="{{ season }}" {% if filters.selected_season == season %}selected{% endif %}>{{ season }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Apply Filters</button>
+        </form>
+    </section>
+    <hr>
+    <section id="war-data-table-section">
+        <h2>War Data Table</h2>
+        
+        {% if war_data and columns %}
+        <div class="table-container">
+            <table id="war-data-table" class="war-data-table">
+                <thead>
+                    <tr>
+                        {% for column in columns %}
+                        <th class="sortable">
+                            <button class="sortable-button" data-column="{{ column }}">
+                                {{ column }}
+                                <span class="sort-icon">▲</span>
+                            </button>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in war_data %}
+                    <tr>
+                        {% for column in columns %}
+                        <td>{{ row[column] if row[column] is not none else '' }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(216, 213, 213, 0.968); border-radius: 8px;">
+            <p style="font-size: 18px; color: #666;">
+                📋 No war data to display
+            </p>
+            <p style="color: #888;">
+                Select players and season, then apply filters to view war data
+            </p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+
+<script>
+// Multi-select dropdown functionality for war_data.html
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 War Data page loaded!');
+    
+    // Get elements
+    const playerTrigger = document.getElementById('player-trigger');
+    const playerPanel = document.getElementById('player-panel');
+    const selectAllCheckbox = document.getElementById('select-all-players');
+    const playerCheckboxes = document.querySelectorAll('.player-checkbox');
+    
+    // Toggle dropdown when clicking the button
+    if (playerTrigger) {
+        playerTrigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            playerPanel.classList.toggle('show');
+        });
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (playerPanel && !playerPanel.contains(e.target) && e.target !== playerTrigger) {
+            playerPanel.classList.remove('show');
+        }
+    });
+    
+    // "Select All" checkbox functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            playerCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateFilterDisplay();
+        });
+    }
+    
+    // Update display when individual checkboxes change
+    playerCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            updateFilterDisplay();
+            
+            // Update "Select All" checkbox state
+            const allChecked = Array.from(playerCheckboxes).every(c => c.checked);
+            const noneChecked = Array.from(playerCheckboxes).every(c => !c.checked);
+            
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+            }
+        });
+    });
+    
+    // Function to update the button text showing selection
+    function updateFilterDisplay() {
+        const selected = Array.from(playerCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        
+        const filterSelect = document.getElementById('filter-select');
+        if (!filterSelect) return;
+        
+        if (selected.length === 0) {
+            filterSelect.textContent = 'Select players';
+        } else if (selected.length === playerCheckboxes.length) {
+            filterSelect.textContent = 'All players';
+        } else if (selected.length === 1) {
+            filterSelect.textContent = selected[0];
+        } else {
+            filterSelect.textContent = `${selected.length} players selected`;
+        }
+    }
+    
+    // Initialize filter display and select all state
+    if (playerCheckboxes.length > 0) {
+        updateFilterDisplay();
+        
+        // Update "Select All" checkbox initial state
+        const allChecked = Array.from(playerCheckboxes).every(c => c.checked);
+        const noneChecked = Array.from(playerCheckboxes).every(c => !c.checked);
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+        }
+    }
+});
+</script>
+
+{% endblock %}
