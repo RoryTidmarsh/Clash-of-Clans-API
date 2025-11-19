@@ -4,5 +4,4 @@ __pycache__/*
 .vscode/*
 war_Data/*
 __pycache__
-*.txt
 tempCodeRunnerFile.*
