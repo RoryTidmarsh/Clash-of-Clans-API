@@ -2,7 +2,7 @@
 // COMPONENT 1: SITE HEADER
 // ========================================
 class SiteHeader extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         // Get attributes for customisation
         const logoUrl = this.getAttribute('logo-url') || '';
         const title = this.getAttribute('title') || 'Clan War Leageue Stats'
@@ -62,7 +62,7 @@ class SiteHeader extends HTMLElement {
 // COMPONENT 2: NAV BAR
 // ========================================
 class NavBar extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         const defaultLinks = [
             { href: '/', text: 'Home' },
             { href: '/war-table', text: 'War Table' },
@@ -88,7 +88,7 @@ class NavBar extends HTMLElement {
 // COMPONENT 3: FILTER DROPDOWNS
 // ========================================
 class FilterDropdown extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         // Get attributes for customisation
         const filterType = this.getAttribute('filter-type') || 'filter';
         const filterLabel = this.getAttribute('filter-label') || 'Items';
@@ -131,7 +131,7 @@ class FilterDropdown extends HTMLElement {
 // COMPONENT 4: TABLE WITH FILTERING
 // ========================================
 class FilterableTable extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         const tableId = this.getAttribute('table-id') || 'data-table';
         const title = this.getAttribute('title') || 'Data Table';
         const columnsAttr = this.getAttribute('columns');
@@ -243,7 +243,7 @@ class FilterableTable extends HTMLElement {
 // COMPONENT 5: FILTER CONTROLS
 // ========================================
 class FilterControls extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         this.innerHTML = `
             <div class="filter-controls">
                 <button id="apply-filters" type="button" class="filter-button">Apply</button>
@@ -506,7 +506,7 @@ class FilterManager {
 // PAGE LAYOUT COMPONENT 
 // ========================================
 class PageLayout extends HTMLElement {
-    connectedCallBack() {
+    connectedCallback() {
         const logoUrl = this.getAttribute('logo-url') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
         const title = this.getAttribute('title') || 'Clan War League Stats';
         const favicon = this.getAttribute('favicon') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
