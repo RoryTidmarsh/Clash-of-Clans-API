@@ -139,6 +139,21 @@ class FilterableTable extends HTMLElement {
         return div.innerHTML;
     }
 
+    // Helper function to render table body
+    _renderTableBody(data) {
+        const tbody = this.querySelector('tbody');
+        const columns = this.columns;
+        
+        if (!tbody || !columns) return;
+        
+        // Build rows HTML
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
+            </tr>
+        `).join('');
+    }
+
     connectedCallback() {
         const tableId = this.getAttribute('table-id') || 'data-table';
         const title = this.getAttribute('title') || 'Data Table';
@@ -196,6 +211,7 @@ class FilterableTable extends HTMLElement {
         this.filterColumnIndex = parseInt(filterColumn);
         this.tableId = tableId;
         this.columns = columns;
+        this.currentData = data;  // Initialize current data with original data
 
         // Setup sorting immediately after table creation
         this.setupSorting(columns);
@@ -277,13 +293,6 @@ class FilterableTable extends HTMLElement {
             return;
         }
 
-        // Build rows HTML
-        tbody.innerHTML = data.map(row => `
-            <tr>
-                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
-            </tr>
-        `).join('');
-
         // Store the current data for sorting
         this.currentData = data;
         
@@ -300,6 +309,9 @@ class FilterableTable extends HTMLElement {
             }
             h.style.opacity = '0.6';
         });
+        
+        // Render the table body
+        this._renderTableBody(data);
 }
 
 setupSorting(columns) {
@@ -307,15 +319,10 @@ setupSorting(columns) {
     const headers = this.querySelectorAll('thead th.sortable');
     const tbody = this.querySelector('tbody');
     
-    // Initialize sorting state on the instance
+    // Initialize sorting state on the instance (only if not already initialized)
     if (this.currentSortColumn === undefined) {
         this.currentSortColumn = null;
         this.sortDirection = 1; // 1 for ascending, -1 for descending
-    }
-    
-    // Store current data for sorting (initialize with original data)
-    if (!this.currentData) {
-        this.currentData = [...this.originalData];
     }
 
     // Store event listeners for cleanup if needed
@@ -379,11 +386,7 @@ setupSorting(columns) {
             });
 
             // Re-render the table with sorted data
-            tbody.innerHTML = dataToSort.map(row => `
-                <tr>
-                    ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
-                </tr>
-            `).join('');
+            this._renderTableBody(dataToSort);
 
             // Update sort icons on all headers
             headers.forEach(h => {
