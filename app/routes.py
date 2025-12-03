@@ -8,7 +8,6 @@ import app.services.graphs as graphs
 import pandas as pd
 import numpy as np
 import os
-import math
 from app.supabase_client import supabase
 
 
@@ -34,32 +33,54 @@ def clean_nan_values(data):
             if isinstance(item, dict):
                 cleaned_row = {}
                 for key, value in item.items():
-                    if isinstance(value, float) and math.isnan(value):
-                        cleaned_row[key] = None
-                    elif isinstance(value, (list, dict)):
-                        cleaned_row[key] = clean_nan_values(value)
-                    else:
-                        cleaned_row[key] = value
+                    try:
+                        # pd.isna() can handle scalar values including numpy types
+                        if pd.isna(value) and not isinstance(value, (list, dict)):
+                            cleaned_row[key] = None
+                        elif isinstance(value, (list, dict)):
+                            cleaned_row[key] = clean_nan_values(value)
+                        else:
+                            cleaned_row[key] = value
+                    except (TypeError, ValueError):
+                        # If pd.isna() fails (e.g., on complex objects), keep original
+                        if isinstance(value, (list, dict)):
+                            cleaned_row[key] = clean_nan_values(value)
+                        else:
+                            cleaned_row[key] = value
                 cleaned_data.append(cleaned_row)
             elif isinstance(item, (list, dict)):
                 cleaned_data.append(clean_nan_values(item))
-            elif isinstance(item, float) and math.isnan(item):
-                cleaned_data.append(None)
             else:
-                cleaned_data.append(item)
+                try:
+                    if pd.isna(item):
+                        cleaned_data.append(None)
+                    else:
+                        cleaned_data.append(item)
+                except (TypeError, ValueError):
+                    cleaned_data.append(item)
         return cleaned_data
     elif isinstance(data, dict):
         cleaned_dict = {}
         for key, value in data.items():
-            if isinstance(value, float) and math.isnan(value):
-                cleaned_dict[key] = None
-            elif isinstance(value, (list, dict)):
-                cleaned_dict[key] = clean_nan_values(value)
-            else:
-                cleaned_dict[key] = value
+            try:
+                if pd.isna(value) and not isinstance(value, (list, dict)):
+                    cleaned_dict[key] = None
+                elif isinstance(value, (list, dict)):
+                    cleaned_dict[key] = clean_nan_values(value)
+                else:
+                    cleaned_dict[key] = value
+            except (TypeError, ValueError):
+                if isinstance(value, (list, dict)):
+                    cleaned_dict[key] = clean_nan_values(value)
+                else:
+                    cleaned_dict[key] = value
         return cleaned_dict
-    elif isinstance(data, float) and math.isnan(data):
-        return None
+    else:
+        try:
+            if pd.isna(data):
+                return None
+        except (TypeError, ValueError):
+            pass
     return data
 
 
