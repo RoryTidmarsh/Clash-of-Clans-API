@@ -149,7 +149,7 @@ class FilterDropdown extends HTMLElement {
 class FilterableTable extends HTMLElement {
     // Helper function to escape HTML to prevent XSS
     escapeHtml(text) {
-        if (text == null) return '';
+        if (text === null || text === undefined) return '';
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
@@ -177,20 +177,46 @@ class FilterableTable extends HTMLElement {
         const dataAttr = this.getAttribute('data');
         const filterColumn = this.getAttribute('filter-column') || '0';
 
-         console.log(`🔍 FilterableTable Debug (${tableId}):`, {
+        console.log(`🔍 FilterableTable Debug (${tableId}):`, {
             columnsAttr,
             dataAttr: dataAttr ? dataAttr.substring(0, 100) + '...' : 'null',
             columnsAttrType: typeof columnsAttr
         });
 
-        const columns = columnsAttr ? JSON.parse(columnsAttr) : [];
-        const data = dataAttr ? JSON.parse(dataAttr) : [];
+        // Parse columns with error handling
+        let columns = [];
+        try {
+            columns = columnsAttr ? JSON.parse(columnsAttr) : [];
+        } catch (error) {
+            console.error(`❌ Error parsing columns for ${tableId}:`, error);
+            console.error('Columns attribute value:', columnsAttr);
+            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table columns: ${error.message}</div>`;
+            return;
+        }
+
+        // Parse data with error handling
+        let data = [];
+        try {
+            data = dataAttr ? JSON.parse(dataAttr) : [];
+        } catch (error) {
+            console.error(`❌ Error parsing data for ${tableId}:`, error);
+            console.error('Data attribute value:', dataAttr ? dataAttr.substring(0, 200) : 'null');
+            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table data: ${error.message}</div>`;
+            return;
+        }
 
         console.log(`📊 Parsed data for ${tableId}:`, {
             columns,
             dataLength: data.length,
             firstRow: data[0] || 'empty'
         });
+
+        // Validate that we have columns
+        if (!columns || columns.length === 0) {
+            console.warn(`⚠️  No columns provided for ${tableId}`);
+            this.innerHTML = `<div style="text-align: center; padding: 20px; color: #999;">No columns defined for table</div>`;
+            return;
+        }
 
         // Build table HTML
         this.innerHTML = `
@@ -220,7 +246,7 @@ class FilterableTable extends HTMLElement {
             </section>
         `;
 
-        console.log(`✅ Table HTML injected for ${tableId}`);
+        console.log(`✅ Table HTML injected for ${tableId} with ${data.length} rows`);
 
         // Store original data for filtering
         this.originalData = data;
@@ -241,12 +267,22 @@ class FilterableTable extends HTMLElement {
             if (window.filterManager) {
                 clearInterval(checkFilterManager);
                 
+                console.log(`🔗 FilterManager connected for ${this.tableId || 'table'}`);
+                
                 // Listen for filter changes
                 window.filterManager.onApply((appliedFilters) => {
                 this.applyFilters(appliedFilters);
                 });
             }
         }, 100);
+        
+        // Safety timeout to prevent infinite checking
+        setTimeout(() => {
+            clearInterval(checkFilterManager);
+            if (!window.filterManager) {
+                console.warn('⚠️  FilterManager not found after timeout');
+            }
+        }, 5000);
     }
 
     applyFilters(filters){
@@ -326,6 +362,11 @@ setupSorting(columns) {
     const table = this.querySelector('table');
     const headers = this.querySelectorAll('thead th.sortable');
     const tbody = this.querySelector('tbody');
+    
+    if (!table || !tbody) {
+        console.warn('⚠️  Table or tbody not found, skipping sort setup');
+        return;
+    }
     
     // Initialize sorting state on the instance
     if (this.currentSortColumn === undefined) {
