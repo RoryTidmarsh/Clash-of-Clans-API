@@ -49,11 +49,10 @@ def war_table():
     season_filter = request.args.get("season")  # Get the "season" query parameter, if provided
     
     # Convert list to single value for backward compatibility with existing functions
-    # If multiple players selected, pass the list; if single or none, pass as string
     if len(selected_players) == 1:
         player_filter = selected_players[0]
     elif len(selected_players) > 1:
-        player_filter = selected_players  # Pass as list
+        player_filter = selected_players
     else:
         player_filter = None
 
@@ -61,18 +60,24 @@ def war_table():
     war_data = process_data.translate_columns(process_data.reorder_columns(war_data))
     
     # Convert DataFrame to list of dictionaries for template compatibility
-    if hasattr(war_data, 'to_dict'):
-        # It's a pandas DataFrame
+    if isinstance(war_data, pd.DataFrame):
         war_data_list = war_data.to_dict('records')  # Convert to list of dicts
         columns = list(war_data.columns)  # Get column names
     elif isinstance(war_data, list) and len(war_data) > 0:
-        # It's already a list of dicts
         war_data_list = war_data
         columns = list(war_data[0].keys()) if war_data else []
     else:
         # Handle empty or unexpected data
         war_data_list = []
         columns = []
+    
+    # Debug logging
+    print(f"🔍 War table debug:")
+    print(f"  - War data type: {type(war_data)}")
+    print(f"  - War data length: {len(war_data_list)}")
+    print(f"  - Columns: {columns}")
+    if war_data_list:
+        print(f"  - First row keys: {list(war_data_list[0].keys())}")
     
     # Get all available options for dropdowns
     all_players = index_data.get_all_players()
@@ -81,10 +86,10 @@ def war_table():
     return render_template("war_data.html",
         war_data=war_data_list,
         columns=columns,
-        all_players=all_players,        # Required for universal filters
-        all_seasons=all_seasons,        # Required for universal filters
-        selected_players=selected_players,  # For maintaining state
-        selected_season=season_filter      # For maintaining state
+        all_players=all_players,
+        all_seasons=all_seasons,
+        selected_players=selected_players,
+        selected_season=season_filter
     )
 
 @bp.route('/progress-graphs', methods=['GET'])

@@ -252,40 +252,32 @@ class FilterableTable extends HTMLElement {
     applyFilters(filters){
         const filterType = Object.keys(filters)[0]; // get the first filter type
         const selectedValues = filters[filterType] || [];
-
+    
         // if no filters applied, show all data
         if (selectedValues.length === 0) {
             this.renderRows(this.originalData);
             return;
         }
-
-        // Map filter types to TRANSLATED column names (as they appear in the template)
-        const filterColumnMap = {
-            'players': '👤 Player',      // Translated column name
-            'seasons': '📅 Season',      // Translated column name
-            'battledays': '🔥 Battle Day' // Translated column name
-        };
-
-        const columnName = filterColumnMap[filterType] || filterType;
-
-        // DEBUG: Log actual names in data
-        const actualNames = [...new Set(this.originalData.map(row => row[columnName]))];
-        console.log('📋 Actual names in data:', actualNames);
-        console.log('🔍 Selected values to match:', selectedValues);
-        console.log('📝 Name comparison (first data name):', {
-            dataName: JSON.stringify(actualNames[0]),
-            selectedName: JSON.stringify(selectedValues[0]),
-            match: actualNames[0] === selectedValues[0]
-        });
-
+    
+        // Dynamically find the column that matches the filter type
+        // Try to match based on filter type name in column headers
+        const columnName = this.columns.find(col => {
+            const colLower = col.toLowerCase();
+            const filterLower = filterType.toLowerCase();
+            return colLower.includes(filterLower) || filterLower.includes(colLower.replace(/[^a-z0-9]/g, ''));
+        }) || filterType;
+    
+        console.log(`🔍 Filter type: ${filterType}, Matched column: ${columnName}`);
+        console.log('� Available columns:', this.columns);
+    
         // Filter data based on selected values
         const filteredData = this.originalData.filter(row => {
             const columnValue = String(row[columnName] || '');
             return selectedValues.includes(columnValue);
         });
-
-        console.log(`🔍 Filtering ${filterType} by ${columnName}:`, {selectedValues, matchedRows: filteredData.length});
-
+    
+        console.log(`✅ Filtering by ${columnName}:`, {selectedValues, matchedRows: filteredData.length});
+    
         // Render filtered rows
         this.renderRows(filteredData);
     }

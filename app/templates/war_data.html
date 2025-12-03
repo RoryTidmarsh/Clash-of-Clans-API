@@ -1,186 +1,31 @@
-{% extends "base.html" %}
-
-{% block title %}War Data - Pussay Palace{% endblock %}
-
-{% block content %}
-<div class="main-data-box">
-    <section id="filters">
-        <!-- Players Filter -->
-        {% set filter_type = 'players' %}
-        {% set filter_label = 'Players' %}
-        {% set filter_options = all_players %}
-        {% include 'filters.html' %}
-        
-        <!-- Seasons Filter -->
-        {% set filter_type = 'seasons' %}
-        {% set filter_label = 'Seasons' %}
-        {% set filter_options = all_seasons %}
-        {% include 'filters.html' %}
-        
-        <button id="apply-filters" type="button">Apply Filters</button>
-        <button id="reset-filters" type="button">Reset</button>
-    </section>
-    
-    <hr>
-    
-    <section id="war-data">
-        <h2>War Data</h2>
-        {% if war_data %}
-        <table id="war-data-table">
-            <thead>
-                <tr>
-                    {% for column in war_data[0].keys() %}
-                    <th class="sortable">
-                        <button class="sortable-button" data-column="{{ column }}">
-                            {{ column }}
-                            <span class="sort-icon">▲</span>
-                        </button>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in war_data %}
-                <tr>
-                    {% for value in row.values() %}
-                    <td>{{ value }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>No war data available.</p>
-        {% endif %}
-    </section>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 War Data page loaded');
-    
-    // Store original table data for client-side filtering
-    const originalWarData = Array.from(document.querySelectorAll('#war-data-table tbody tr'));
-    
-    // Listen for when filters are applied
-    window.filterManager.onApply((appliedFilters) => {
-        console.log('Filters applied:', appliedFilters);
-        updateWarDataTable(appliedFilters);
-    });
-    
-    function updateWarDataTable(filters) {
-        const selectedPlayers = filters.players || [];
-        const selectedSeasons = filters.seasons || [];
-        
-        console.log('Selected players:', selectedPlayers);
-        console.log('Selected seasons:', selectedSeasons);
-        
-        // If no filters selected, show all data
-        if (selectedPlayers.length === 0 && selectedSeasons.length === 0) {
-            showAllRows(originalWarData);
-            return;
-        }
-        
-        // Filter the data
-        filterWarDataTable(originalWarData, selectedPlayers, selectedSeasons);
-    }
-    
-    function filterWarDataTable(originalRows, selectedPlayers, selectedSeasons) {
-        const tbody = document.querySelector('#war-data-table tbody');
-        
-        // Clear current table
-        tbody.innerHTML = '';
-        
-        // Filter rows based on selected criteria
-        const filteredRows = originalRows.filter(row => {
-            const cells = row.cells;
+<!DOCTYPE html>
+<html lang="en">
+<head></head>
+<body>
+    <page-layout title="Clan War League Stats - Pussay Palace" favicon="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png" show-refresh="true">
+        <div class="main-data-box">
+            <section id="filters">
+                <filter-dropdown filter-type="players" filter-label="Players" options='{{ all_players | tojson }}'></filter-dropdown>
+                <filter-dropdown filter-type="seasons" filter-label="Seasons" options='{{ all_seasons | tojson }}'></filter-dropdown>
+                <filter-controls></filter-controls>
+            </section>
+            <hr>
             
-            // Adjust these indices based on your table structure
-            const playerName = cells[0].textContent.trim(); // Assuming player name is first column
-            const season = cells[1].textContent.trim(); // Assuming season is second column
-            
-            // Check player filter
-            const playerMatch = selectedPlayers.length === 0 || selectedPlayers.includes(playerName);
-            
-            // Check season filter
-            const seasonMatch = selectedSeasons.length === 0 || selectedSeasons.includes(season);
-            
-            return playerMatch && seasonMatch;
-        });
-        
-        // Add filtered rows back to table
-        filteredRows.forEach(row => {
-            tbody.appendChild(row.cloneNode(true));
-        });
-        
-        // Show message if no results
-        if (filteredRows.length === 0) {
-            showNoResults(tbody);
-        }
-        
-        console.log(`Filtered ${filteredRows.length} rows from ${originalRows.length} total`);
-    }
-    
-    function showAllRows(originalRows) {
-        const tbody = document.querySelector('#war-data-table tbody');
-        tbody.innerHTML = '';
-        originalRows.forEach(row => {
-            tbody.appendChild(row.cloneNode(true));
-        });
-    }
-    
-    function showNoResults(tbody) {
-        const noResultsRow = document.createElement('tr');
-        const noResultsCell = document.createElement('td');
-        const columnCount = document.querySelectorAll('#war-data-table thead th').length;
-        
-        noResultsCell.setAttribute('colspan', columnCount);
-        noResultsCell.textContent = 'No data found matching the selected filters';
-        noResultsCell.style.textAlign = 'center';
-        noResultsCell.style.fontStyle = 'italic';
-        noResultsCell.style.color = '#666';
-        noResultsCell.style.padding = '20px';
-        
-        noResultsRow.appendChild(noResultsCell);
-        tbody.appendChild(noResultsRow);
-    }
-    
-    // Table sorting functionality
-    function makeTableSortable(tableId) {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        
-        const headers = table.querySelectorAll("th.sortable");
-        
-        headers.forEach((header) => {
-            let sortDirection = 1;
-            header.addEventListener("click", function () {
-                const columnIndex = Array.prototype.indexOf.call(headers, this);
-                const rows = Array.from(table.querySelector("tbody").rows);
-                
-                rows.sort((rowA, rowB) => {
-                    const cellA = rowA.cells[columnIndex].innerText.trim();
-                    const cellB = rowB.cells[columnIndex].innerText.trim();
-                    
-                    const valueA = isNaN(cellA) ? cellA : parseFloat(cellA);
-                    const valueB = isNaN(cellB) ? cellB : parseFloat(cellB);
-                    
-                    return sortDirection * (valueA > valueB ? 1 : valueA < valueB ? -1 : 0);
-                });
-                
-                const tbody = table.querySelector("tbody");
-                rows.forEach((row) => tbody.appendChild(row));
-                
-                sortDirection *= -1;
-                
-                headers.forEach((h) => h.querySelector(".sort-icon").innerText = "▲");
-                this.querySelector(".sort-icon").innerText = sortDirection === 1 ? "▲" : "▼";
-            });
-        });
-    }
-    
-    // Initialize table sorting
-    makeTableSortable("war-data-table");
-});
-</script>
-{% endblock %}
+            {% if war_data and war_data|length > 0 %}
+            <filterable-table
+                table-id="war-data-table"
+                title="War Data"
+                columns='{{ columns | tojson }}'
+                data='{{ war_data | tojson }}'
+                filter-column="0">
+            </filterable-table>
+            {% else %}
+            <div style="text-align: center; padding: 20px; color: #999;">
+                <p>No war data available</p>
+            </div>
+            {% endif %}
+        </div>
+    </page-layout>
+    <script src="{{ url_for('static', filename='components.js') }}"></script>
+</body>
+</html>

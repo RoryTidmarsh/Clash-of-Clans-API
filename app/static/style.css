@@ -257,7 +257,7 @@ section h2 {
 }
 
 .dropdown-arrow {
-    margin-left: 10px;
+    margin-left: 1.2px;
     transition: transform 0.3s ease;
     color: #6d6ed6;
     font-size: 0.8em;
@@ -510,7 +510,7 @@ section h2 {
     color: #383acd;
 }
 .dropdown-arrow {
-    margin-left: 10px;
+    margin-left: 1.2px;
     transition: transform 0.3s ease;
     color: #6d6ed6;
     font-weight: bold;  /* Change from bold */
