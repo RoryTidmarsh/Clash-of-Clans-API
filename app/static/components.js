@@ -101,7 +101,7 @@ class FilterDropdown extends HTMLElement {
             <label> Select ${filterLabel}:</label>
             <div class="multi-select-dropdown" data-filter-type="${filterType}"> 
                 <div class="multi-select-trigger" id="${filterType}-trigger">
-                    <span>Select ${filterLabel}</span>
+                    <span id="${filterType}-count">Select ${filterLabel}</span>
                     <div class="arrow">&#9660;</div>
                 </div>
                 <div class="multi-select-panel" id="${filterType}-panel">
@@ -118,10 +118,26 @@ class FilterDropdown extends HTMLElement {
                 </div>
             </div>
         `;
+        
         // Initialise filter functionality
         setTimeout(() => {
             if (window.filterManager) {
                 window.filterManager.setupFilter(filterType);
+                
+                // Add listeners to update count when checkboxes change
+                const checkboxes = this.querySelectorAll(`.${filterType}-checkbox`);
+                const countSpan = document.getElementById(`${filterType}-count`);
+                
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        const checkedCount = this.querySelectorAll(`.${filterType}-checkbox:checked`).length;
+                        if (checkedCount > 0) {
+                            countSpan.textContent = `${checkedCount} selected`;
+                        } else {
+                            countSpan.textContent = `Select ${filterLabel}`;
+                        }
+                    });
+                });
             }
         }, 0);   
     }
@@ -307,7 +323,7 @@ class FilterableTable extends HTMLElement {
             if (icon) {
                 icon.textContent = '▾';
             }
-            h.style.opacity = '0.6';
+            h.classList.remove('active'); // Remove active class instead of setting opacity
         });
         
         // Render the table body

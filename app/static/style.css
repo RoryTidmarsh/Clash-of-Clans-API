@@ -410,18 +410,22 @@ section h2 {
 }
 
 .sortable-button:hover {
-    color: #a16dd6; /* Change to your desired hover color */
-    text-decoration: underline;
+    color: #8586d3; /* Change to your desired hover color */
+    text-decoration: underline; /* Underline on hover for clarity */    
 }
 
 .sort-icon {
-    font-size: 0.8em;
+    font-size: 1.3em;
     color: gray;
     transition: transform 0.2s ease; /* Smooth flipping effect */
+    text-decoration: none; /* Remove underline from arrow */
 }
 
 .sortable-button:hover .sort-icon {
-    transform: rotate(180deg); /* Flip the arrow upside down */
+    transition: transform 0.3s ease;
+    color:#383acd;
+    transform: rotate(180deg);
+    text-decoration: none;
 }
 
 /* === FILTERS AND GRAPH LAYOUT === */
@@ -509,8 +513,8 @@ section h2 {
     margin-left: 10px;
     transition: transform 0.3s ease;
     color: #6d6ed6;
-    font-weight: normal;  /* Change from bold */
-    font-size: 0.8em;  /* Smaller arrow */
+    font-weight: bold;  /* Change from bold */
+    font-size: 3em;  /* Smaller arrow */
 }
 
 .multi-select-trigger.active .dropdown-arrow {
