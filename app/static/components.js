@@ -111,7 +111,7 @@ class FilterDropdown extends HTMLElement {
                     </div>
                     ${options.map(option => `
                         <div class="multi-select-option">
-                            <input type="checkbox" class="${filterType}-checkbox" value="${option.value}">
+                            <input type="checkbox" class="${filterType}-checkbox" value="${option}">
                             <span>${option}</span>
                         </div>
                     `).join('')}
@@ -138,8 +138,20 @@ class FilterableTable extends HTMLElement {
         const dataAttr = this.getAttribute('data');
         const filterColumn = this.getAttribute('filter-column') || '0';
 
+         console.log(`🔍 FilterableTable Debug (${tableId}):`, {
+            columnsAttr,
+            dataAttr: dataAttr ? dataAttr.substring(0, 100) + '...' : 'null',
+            columnsAttrType: typeof columnsAttr
+        });
+
         const columns = columnsAttr ? JSON.parse(columnsAttr) : [];
         const data = dataAttr ? JSON.parse(dataAttr) : [];
+
+        console.log(`📊 Parsed data for ${tableId}:`, {
+            columns,
+            dataLength: data.length,
+            firstRow: data[0] || 'empty'
+        });
 
         // Build table HTML
         this.innerHTML = `
@@ -161,13 +173,15 @@ class FilterableTable extends HTMLElement {
                     <tbody>
                         ${data.map(row => `
                             <tr>
-                                ${columns.map(col => `<td>${row[col] || ''}</td>`).join('')}
+                                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </section>
         `;
+
+        console.log(`✅ Table HTML injected for ${tableId}`);
 
         // Store original data for filtering
         this.originalData = data;
@@ -192,7 +206,6 @@ class FilterableTable extends HTMLElement {
     }
 
     applyFilters(filters){
-        const tbody = this.querySelector('tbody');
         const filterType = Object.keys(filters)[0]; // get the first filter type
         const selectedValues = filters[filterType] || [];
 
@@ -202,11 +215,32 @@ class FilterableTable extends HTMLElement {
             return;
         }
 
+        // Map filter types to TRANSLATED column names (as they appear in the template)
+        const filterColumnMap = {
+            'players': '👤 Player',      // Translated column name
+            'seasons': '📅 Season',      // Translated column name
+            'battledays': '🔥 Battle Day' // Translated column name
+        };
+
+        const columnName = filterColumnMap[filterType] || filterType;
+
+        // DEBUG: Log actual names in data
+        const actualNames = [...new Set(this.originalData.map(row => row[columnName]))];
+        console.log('📋 Actual names in data:', actualNames);
+        console.log('🔍 Selected values to match:', selectedValues);
+        console.log('📝 Name comparison (first data name):', {
+            dataName: JSON.stringify(actualNames[0]),
+            selectedName: JSON.stringify(selectedValues[0]),
+            match: actualNames[0] === selectedValues[0]
+        });
+
         // Filter data based on selected values
         const filteredData = this.originalData.filter(row => {
-            const columnValue = String(Object.values(row)[this.filterColumnIndex]);
+            const columnValue = String(row[columnName] || '');
             return selectedValues.includes(columnValue);
         });
+
+        console.log(`🔍 Filtering ${filterType} by ${columnName}:`, {selectedValues, matchedRows: filteredData.length});
 
         // Render filtered rows
         this.renderRows(filteredData);
@@ -218,7 +252,10 @@ class FilterableTable extends HTMLElement {
 
     renderRows(data){
         const tbody = this.querySelector('tbody');
-        const columns = Object.keys(this.originalData[0] || {});
+        // Get columns from the table header instead of the data object
+        const columns = Array.from(this.querySelector('thead tr').querySelectorAll('th')).map(th => {
+            return th.textContent.trim().replace('▾', '').trim();
+        });
 
         // If no data, show no data message
         if (data.length === 0) {
@@ -233,10 +270,70 @@ class FilterableTable extends HTMLElement {
         // Build rows HTML
         tbody.innerHTML = data.map(row => `
             <tr>
-                ${columns.map(col => `<td>${row[col] || ''}</td>`).join('')}
+                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
             </tr>
         `).join('');
-    }
+
+        // Add sorting functionality to headers
+        this.setupSorting(columns);
+}
+
+setupSorting(columns) {
+    const table = this.querySelector('table');
+    const headers = this.querySelectorAll('thead th.sortable');
+    const tbody = this.querySelector('tbody');
+    let currentSortColumn = null;
+    let sortDirection = 1; // 1 for ascending, -1 for descending
+
+    headers.forEach((header, index) => {
+        header.style.cursor = 'pointer';
+        
+        header.addEventListener('click', () => {
+            const columnName = columns[index];
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Skip if no data rows
+            if (rows.length === 0) return;
+
+            // If clicking the same column, toggle direction
+            if (currentSortColumn === columnName) {
+                sortDirection *= -1;
+            } else {
+                sortDirection = 1;
+                currentSortColumn = columnName;
+            }
+
+            // Sort the rows
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[index].textContent.trim();
+                const cellB = rowB.cells[index].textContent.trim();
+
+                // Try to parse as numbers
+                const valueA = isNaN(cellA) ? cellA.toLowerCase() : parseFloat(cellA);
+                const valueB = isNaN(cellB) ? cellB.toLowerCase() : parseFloat(cellB);
+
+                if (valueA > valueB) return sortDirection;
+                if (valueA < valueB) return -sortDirection;
+                return 0;
+            });
+
+            // Re-append sorted rows to tbody
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Update sort icons on all headers
+            headers.forEach(h => {
+                h.querySelector('.sort-icon').textContent = '▾';
+                h.style.opacity = '0.6';
+            });
+            
+            // Highlight active column
+            header.querySelector('.sort-icon').textContent = sortDirection === 1 ? '▾' : '▴';
+            header.style.opacity = '1';
+
+            console.log(`📊 Sorted by ${columnName} (${sortDirection === 1 ? 'ASC' : 'DESC'})`);
+        });
+    });
+}
 }
 
 // ========================================

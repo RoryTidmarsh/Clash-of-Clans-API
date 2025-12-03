@@ -176,12 +176,15 @@ section h2 {
 
 /* --- Filters --- */
 #filters {
-    margin-bottom: 18px;
-    font-size: 1.05em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    margin-bottom: 20px;
 }
 
 #filters label {
-    font-weight: 500;
+    font-weight: 700;
     margin-right: 6px;
     color: #4c4cab;
 }
@@ -632,12 +635,12 @@ section h2 {
     flex: 1;
     min-width: 130px;
     max-width: 150px;
-    padding: 12px;
-    margin-top: 10px;
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-weight: 600;
-    border-radius: 8px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 5px;
     cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
     transition: all 0.2s;
     border: 2px solid #d1d9ff;
     background: white;

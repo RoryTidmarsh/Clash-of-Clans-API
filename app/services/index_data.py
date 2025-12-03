@@ -11,7 +11,11 @@ def get_index_data(season_filter=None, player_filter=None):
         query = query.eq("name", player_filter)
 
     # Execute the query and fetch data
-    result = query.execute()
+    try:
+        result = query.execute()
+    except Exception as e:
+        raise ValueError({"error": f"Error fetching data: {e}"})  # Return error if query fails
+        
 
     # Process the data into structured format
     if "error" in result:
