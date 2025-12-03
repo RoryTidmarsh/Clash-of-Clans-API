@@ -6,11 +6,40 @@ import app.services.full_table as full_table
 from app.services.reading_WarData import WarDataManager, get_war_stats
 import app.services.graphs as graphs
 import pandas as pd
+import numpy as np
 import os
+import math
 from app.supabase_client import supabase
 
 
 bp = Blueprint('main', __name__)
+
+def clean_nan_values(data):
+    """
+    Replace NaN values with None in a list of dictionaries or DataFrame.
+    This ensures proper JSON serialization without NaN errors.
+    
+    Args:
+        data: Either a pandas DataFrame or list of dictionaries
+        
+    Returns:
+        Cleaned data in the same format as input
+    """
+    if isinstance(data, pd.DataFrame):
+        return data.replace({np.nan: None})
+    elif isinstance(data, list):
+        cleaned_data = []
+        for row in data:
+            cleaned_row = {}
+            for key, value in row.items():
+                if isinstance(value, float) and math.isnan(value):
+                    cleaned_row[key] = None
+                else:
+                    cleaned_row[key] = value
+            cleaned_data.append(cleaned_row)
+        return cleaned_data
+    return data
+
 
 @bp.route('/', methods=['GET'])
 def index():
@@ -24,6 +53,10 @@ def index():
     # Translate and reorder columns
     page_data["recent_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["recent_stats"], ["season"])))
     page_data["all_time_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["all_time_stats"], ["season"])))
+    
+    # Clean NaN values to avoid JSON parsing errors
+    page_data["recent_stats"] = clean_nan_values(page_data["recent_stats"])
+    page_data["all_time_stats"] = clean_nan_values(page_data["all_time_stats"])
     
     # print(reorder_columns(page_data["recent_stats"][0]))
     
@@ -70,6 +103,9 @@ def war_table():
         # Handle empty or unexpected data
         war_data_list = []
         columns = []
+    
+    # Clean NaN values to avoid JSON parsing errors
+    war_data_list = clean_nan_values(war_data_list)
     
     # Debug logging
     print(f"🔍 War table debug:")
