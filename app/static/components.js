@@ -131,6 +131,29 @@ class FilterDropdown extends HTMLElement {
 // COMPONENT 4: TABLE WITH FILTERING
 // ========================================
 class FilterableTable extends HTMLElement {
+    // Helper function to escape HTML to prevent XSS
+    escapeHtml(text) {
+        if (text == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
+    // Helper function to render table body
+    _renderTableBody(data) {
+        const tbody = this.querySelector('tbody');
+        const columns = this.columns;
+        
+        if (!tbody || !columns) return;
+        
+        // Build rows HTML
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
+            </tr>
+        `).join('');
+    }
+
     connectedCallback() {
         const tableId = this.getAttribute('table-id') || 'data-table';
         const title = this.getAttribute('title') || 'Data Table';
@@ -156,14 +179,14 @@ class FilterableTable extends HTMLElement {
         // Build table HTML
         this.innerHTML = `
             <section>
-                <h2>${title}</h2>
-                <table id="${tableId}">
+                <h2>${this.escapeHtml(title)}</h2>
+                <table id="${this.escapeHtml(tableId)}">
                     <thead>
                         <tr>
                             ${columns.map(col => `
                                 <th class="sortable">
-                                    <button class="sortable-button" data-column="${col}">
-                                        ${col}
+                                    <button class="sortable-button" data-column="${this.escapeHtml(col)}">
+                                        ${this.escapeHtml(col)}
                                         <span class="sort-icon">&#9662;</span>
                                     </button>
                                 </th>
@@ -173,7 +196,7 @@ class FilterableTable extends HTMLElement {
                     <tbody>
                         ${data.map(row => `
                             <tr>
-                                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
+                                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
@@ -187,6 +210,11 @@ class FilterableTable extends HTMLElement {
         this.originalData = data;
         this.filterColumnIndex = parseInt(filterColumn);
         this.tableId = tableId;
+        this.columns = columns;
+        this.currentData = data;  // Initialize current data with original data
+
+        // Setup sorting immediately after table creation
+        this.setupSorting(columns);
 
         // Register with filter Manager
         this.setupFiltering();
@@ -252,10 +280,8 @@ class FilterableTable extends HTMLElement {
 
     renderRows(data){
         const tbody = this.querySelector('tbody');
-        // Get columns from the table header instead of the data object
-        const columns = Array.from(this.querySelector('thead tr').querySelectorAll('th')).map(th => {
-            return th.textContent.trim().replace('▾', '').trim();
-        });
+        // Use stored columns instead of parsing from header
+        const columns = this.columns;
 
         // If no data, show no data message
         if (data.length === 0) {
@@ -267,71 +293,129 @@ class FilterableTable extends HTMLElement {
             return;
         }
 
-        // Build rows HTML
-        tbody.innerHTML = data.map(row => `
-            <tr>
-                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
-            </tr>
-        `).join('');
-
-        // Add sorting functionality to headers
-        this.setupSorting(columns);
+        // Store the current data for sorting
+        this.currentData = data;
+        
+        // Reset sort state when data changes
+        this.currentSortColumn = null;
+        this.sortDirection = 1;
+        
+        // Update sort icons
+        const headers = this.querySelectorAll('thead th.sortable');
+        headers.forEach(h => {
+            const icon = h.querySelector('.sort-icon');
+            if (icon) {
+                icon.textContent = '▾';
+            }
+            h.style.opacity = '0.6';
+        });
+        
+        // Render the table body
+        this._renderTableBody(data);
 }
 
 setupSorting(columns) {
     const table = this.querySelector('table');
     const headers = this.querySelectorAll('thead th.sortable');
     const tbody = this.querySelector('tbody');
-    let currentSortColumn = null;
-    let sortDirection = 1; // 1 for ascending, -1 for descending
+    
+    // Initialize sorting state on the instance (only if not already initialized)
+    if (this.currentSortColumn === undefined) {
+        this.currentSortColumn = null;
+        this.sortDirection = 1; // 1 for ascending, -1 for descending
+    }
+
+    // Store event listeners for cleanup if needed
+    if (!this.sortEventListeners) {
+        this.sortEventListeners = new Map();
+    }
 
     headers.forEach((header, index) => {
-        header.style.cursor = 'pointer';
+        const button = header.querySelector('.sortable-button');
+        if (!button) return;
         
-        header.addEventListener('click', () => {
+        button.style.cursor = 'pointer';
+        
+        // Create event listener function
+        const handleSort = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const columnName = columns[index];
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Get current data to sort
+            const dataToSort = [...this.currentData];
 
             // Skip if no data rows
-            if (rows.length === 0) return;
+            if (dataToSort.length === 0) return;
 
             // If clicking the same column, toggle direction
-            if (currentSortColumn === columnName) {
-                sortDirection *= -1;
+            if (this.currentSortColumn === columnName) {
+                this.sortDirection *= -1;
             } else {
-                sortDirection = 1;
-                currentSortColumn = columnName;
+                this.sortDirection = 1;
+                this.currentSortColumn = columnName;
             }
 
-            // Sort the rows
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[index].textContent.trim();
-                const cellB = rowB.cells[index].textContent.trim();
+            // Sort the data array
+            dataToSort.sort((rowA, rowB) => {
+                const cellA = rowA[columnName];
+                const cellB = rowB[columnName];
+
+                // Handle null/undefined values
+                if (cellA == null && cellB == null) return 0;
+                if (cellA == null) return 1;
+                if (cellB == null) return -1;
+
+                // Convert to string for comparison
+                const strA = String(cellA).trim();
+                const strB = String(cellB).trim();
 
                 // Try to parse as numbers
-                const valueA = isNaN(cellA) ? cellA.toLowerCase() : parseFloat(cellA);
-                const valueB = isNaN(cellB) ? cellB.toLowerCase() : parseFloat(cellB);
-
-                if (valueA > valueB) return sortDirection;
-                if (valueA < valueB) return -sortDirection;
-                return 0;
+                const numA = parseFloat(strA);
+                const numB = parseFloat(strB);
+                
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    // Both are numbers
+                    return (numA - numB) * this.sortDirection;
+                } else {
+                    // String comparison
+                    const compareResult = strA.toLowerCase().localeCompare(strB.toLowerCase());
+                    return compareResult * this.sortDirection;
+                }
             });
 
-            // Re-append sorted rows to tbody
-            rows.forEach(row => tbody.appendChild(row));
+            // Re-render the table with sorted data
+            this._renderTableBody(dataToSort);
 
             // Update sort icons on all headers
             headers.forEach(h => {
-                h.querySelector('.sort-icon').textContent = '▾';
+                const icon = h.querySelector('.sort-icon');
+                if (icon) {
+                    icon.textContent = '▾';
+                }
                 h.style.opacity = '0.6';
             });
             
             // Highlight active column
-            header.querySelector('.sort-icon').textContent = sortDirection === 1 ? '▾' : '▴';
+            const activeIcon = button.querySelector('.sort-icon');
+            if (activeIcon) {
+                activeIcon.textContent = this.sortDirection === 1 ? '▾' : '▴';
+            }
             header.style.opacity = '1';
 
-            console.log(`📊 Sorted by ${columnName} (${sortDirection === 1 ? 'ASC' : 'DESC'})`);
-        });
+            console.log(`📊 Sorted by ${columnName} (${this.sortDirection === 1 ? 'ASC' : 'DESC'})`);
+        };
+        
+        // Remove existing listener if any
+        const existingListener = this.sortEventListeners.get(button);
+        if (existingListener) {
+            button.removeEventListener('click', existingListener);
+        }
+        
+        // Add new listener and store reference
+        button.addEventListener('click', handleSort);
+        this.sortEventListeners.set(button, handleSort);
     });
 }
 }
