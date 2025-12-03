@@ -675,6 +675,35 @@ section h2 {
     border: 1px solid #ece9fc;
 }
 
+/* Sortable header active state */
+th.sortable.active {
+    background: #6d6ed6;
+}
+
+th.sortable.active .sortable-button {
+    color: #f5f7ff;
+}
+
+th.sortable.active .sort-icon {
+    color: #f5f7ff;
+}
+
+/* Inactive headers stay normal */
+th.sortable {
+    background: #e3e1fc;
+    transition: all 0.2s ease;
+}
+
+th.sortable .sortable-button {
+    color: #6d6ed6;
+    transition: color 0.2s ease;
+}
+
+th.sortable .sort-icon {
+    color: #6d6ed6;
+    transition: color 0.2s ease;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 968px) {
     .filters-and-graph {

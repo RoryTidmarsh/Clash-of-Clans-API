@@ -319,13 +319,12 @@ setupSorting(columns) {
     const headers = this.querySelectorAll('thead th.sortable');
     const tbody = this.querySelector('tbody');
     
-    // Initialize sorting state on the instance (only if not already initialized)
+    // Initialize sorting state on the instance
     if (this.currentSortColumn === undefined) {
         this.currentSortColumn = null;
-        this.sortDirection = 1; // 1 for ascending, -1 for descending
+        this.sortDirection = 1;
     }
 
-    // Store event listeners for cleanup if needed
     if (!this.sortEventListeners) {
         this.sortEventListeners = new Map();
     }
@@ -336,17 +335,13 @@ setupSorting(columns) {
         
         button.style.cursor = 'pointer';
         
-        // Create event listener function
         const handleSort = (e) => {
             e.preventDefault();
             e.stopPropagation();
             
             const columnName = columns[index];
-            
-            // Get current data to sort
             const dataToSort = [...this.currentData];
 
-            // Skip if no data rows
             if (dataToSort.length === 0) return;
 
             // If clicking the same column, toggle direction
@@ -362,24 +357,19 @@ setupSorting(columns) {
                 const cellA = rowA[columnName];
                 const cellB = rowB[columnName];
 
-                // Handle null/undefined values
                 if (cellA == null && cellB == null) return 0;
                 if (cellA == null) return 1;
                 if (cellB == null) return -1;
 
-                // Convert to string for comparison
                 const strA = String(cellA).trim();
                 const strB = String(cellB).trim();
 
-                // Try to parse as numbers
                 const numA = parseFloat(strA);
                 const numB = parseFloat(strB);
                 
                 if (!isNaN(numA) && !isNaN(numB)) {
-                    // Both are numbers
                     return (numA - numB) * this.sortDirection;
                 } else {
-                    // String comparison
                     const compareResult = strA.toLowerCase().localeCompare(strB.toLowerCase());
                     return compareResult * this.sortDirection;
                 }
@@ -388,32 +378,30 @@ setupSorting(columns) {
             // Re-render the table with sorted data
             this._renderTableBody(dataToSort);
 
-            // Update sort icons on all headers
+            // Remove active class from all headers and reset sort icons
             headers.forEach(h => {
+                h.classList.remove('active');
                 const icon = h.querySelector('.sort-icon');
                 if (icon) {
                     icon.textContent = '▾';
                 }
-                h.style.opacity = '0.6';
             });
             
-            // Highlight active column
+            // Add active class to clicked header
+            header.classList.add('active');
             const activeIcon = button.querySelector('.sort-icon');
             if (activeIcon) {
                 activeIcon.textContent = this.sortDirection === 1 ? '▾' : '▴';
             }
-            header.style.opacity = '1';
 
             console.log(`📊 Sorted by ${columnName} (${this.sortDirection === 1 ? 'ASC' : 'DESC'})`);
         };
         
-        // Remove existing listener if any
         const existingListener = this.sortEventListeners.get(button);
         if (existingListener) {
             button.removeEventListener('click', existingListener);
         }
         
-        // Add new listener and store reference
         button.addEventListener('click', handleSort);
         this.sortEventListeners.set(button, handleSort);
     });
