@@ -46,11 +46,6 @@
         {% endif %}
         </div>
 
-    <script>
-        console.log('recent_stats:', {{ recent_stats | tojson }});
-        console.log('all_time_stats:', {{ all_time_stats | tojson }});
-        console.log('all_players:', {{ all_players | tojson }});
-    </script>
     </page-layout>
 
     <script src="{{ url_for('static', filename='components.js') }}"></script>
