@@ -18,9 +18,10 @@ def clean_nan_values(data):
     """
     Replace NaN values with None in a list of dictionaries or DataFrame.
     This ensures proper JSON serialization without NaN errors.
+    Handles nested structures recursively.
     
     Args:
-        data: Either a pandas DataFrame or list of dictionaries
+        data: Either a pandas DataFrame, list, dict, or primitive value
         
     Returns:
         Cleaned data in the same format as input
@@ -29,15 +30,36 @@ def clean_nan_values(data):
         return data.replace({np.nan: None})
     elif isinstance(data, list):
         cleaned_data = []
-        for row in data:
-            cleaned_row = {}
-            for key, value in row.items():
-                if isinstance(value, float) and math.isnan(value):
-                    cleaned_row[key] = None
-                else:
-                    cleaned_row[key] = value
-            cleaned_data.append(cleaned_row)
+        for item in data:
+            if isinstance(item, dict):
+                cleaned_row = {}
+                for key, value in item.items():
+                    if isinstance(value, float) and math.isnan(value):
+                        cleaned_row[key] = None
+                    elif isinstance(value, (list, dict)):
+                        cleaned_row[key] = clean_nan_values(value)
+                    else:
+                        cleaned_row[key] = value
+                cleaned_data.append(cleaned_row)
+            elif isinstance(item, (list, dict)):
+                cleaned_data.append(clean_nan_values(item))
+            elif isinstance(item, float) and math.isnan(item):
+                cleaned_data.append(None)
+            else:
+                cleaned_data.append(item)
         return cleaned_data
+    elif isinstance(data, dict):
+        cleaned_dict = {}
+        for key, value in data.items():
+            if isinstance(value, float) and math.isnan(value):
+                cleaned_dict[key] = None
+            elif isinstance(value, (list, dict)):
+                cleaned_dict[key] = clean_nan_values(value)
+            else:
+                cleaned_dict[key] = value
+        return cleaned_dict
+    elif isinstance(data, float) and math.isnan(data):
+        return None
     return data
 
 
@@ -155,6 +177,9 @@ def progress_graphs():
 
     # prepare Chart.js data for the first y variable (or loop if multiple)
     chartjs_data = graphs.prepare_chartjs_data(grouped_data, y_variable=y_vars[0], x_variable="season")
+    
+    # Clean NaN values to avoid JSON parsing errors
+    chartjs_data = clean_nan_values(chartjs_data)
     
     # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
