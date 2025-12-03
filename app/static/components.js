@@ -131,6 +131,14 @@ class FilterDropdown extends HTMLElement {
 // COMPONENT 4: TABLE WITH FILTERING
 // ========================================
 class FilterableTable extends HTMLElement {
+    // Helper function to escape HTML to prevent XSS
+    escapeHtml(text) {
+        if (text == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
     connectedCallback() {
         const tableId = this.getAttribute('table-id') || 'data-table';
         const title = this.getAttribute('title') || 'Data Table';
@@ -156,14 +164,14 @@ class FilterableTable extends HTMLElement {
         // Build table HTML
         this.innerHTML = `
             <section>
-                <h2>${title}</h2>
-                <table id="${tableId}">
+                <h2>${this.escapeHtml(title)}</h2>
+                <table id="${this.escapeHtml(tableId)}">
                     <thead>
                         <tr>
                             ${columns.map(col => `
                                 <th class="sortable">
-                                    <button class="sortable-button" data-column="${col}">
-                                        ${col}
+                                    <button class="sortable-button" data-column="${this.escapeHtml(col)}">
+                                        ${this.escapeHtml(col)}
                                         <span class="sort-icon">&#9662;</span>
                                     </button>
                                 </th>
@@ -173,7 +181,7 @@ class FilterableTable extends HTMLElement {
                     <tbody>
                         ${data.map(row => `
                             <tr>
-                                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
+                                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
@@ -272,7 +280,7 @@ class FilterableTable extends HTMLElement {
         // Build rows HTML
         tbody.innerHTML = data.map(row => `
             <tr>
-                ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
+                ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
             </tr>
         `).join('');
 
@@ -300,7 +308,7 @@ setupSorting(columns) {
     const tbody = this.querySelector('tbody');
     
     // Initialize sorting state on the instance
-    if (!this.currentSortColumn) {
+    if (this.currentSortColumn === undefined) {
         this.currentSortColumn = null;
         this.sortDirection = 1; // 1 for ascending, -1 for descending
     }
@@ -310,17 +318,19 @@ setupSorting(columns) {
         this.currentData = [...this.originalData];
     }
 
+    // Store event listeners for cleanup if needed
+    if (!this.sortEventListeners) {
+        this.sortEventListeners = new Map();
+    }
+
     headers.forEach((header, index) => {
         const button = header.querySelector('.sortable-button');
         if (!button) return;
         
         button.style.cursor = 'pointer';
         
-        // Remove any existing event listeners by cloning and replacing
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', (e) => {
+        // Create event listener function
+        const handleSort = (e) => {
             e.preventDefault();
             e.stopPropagation();
             
@@ -371,7 +381,7 @@ setupSorting(columns) {
             // Re-render the table with sorted data
             tbody.innerHTML = dataToSort.map(row => `
                 <tr>
-                    ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
+                    ${columns.map(col => `<td>${this.escapeHtml(row[col])}</td>`).join('')}
                 </tr>
             `).join('');
 
@@ -385,14 +395,24 @@ setupSorting(columns) {
             });
             
             // Highlight active column
-            const activeIcon = newButton.querySelector('.sort-icon');
+            const activeIcon = button.querySelector('.sort-icon');
             if (activeIcon) {
                 activeIcon.textContent = this.sortDirection === 1 ? '▾' : '▴';
             }
             header.style.opacity = '1';
 
             console.log(`📊 Sorted by ${columnName} (${this.sortDirection === 1 ? 'ASC' : 'DESC'})`);
-        });
+        };
+        
+        // Remove existing listener if any
+        const existingListener = this.sortEventListeners.get(button);
+        if (existingListener) {
+            button.removeEventListener('click', existingListener);
+        }
+        
+        // Add new listener and store reference
+        button.addEventListener('click', handleSort);
+        this.sortEventListeners.set(button, handleSort);
     });
 }
 }
