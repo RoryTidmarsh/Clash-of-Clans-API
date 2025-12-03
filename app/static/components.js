@@ -263,7 +263,9 @@ class FilterableTable extends HTMLElement {
     }
     setupFiltering() {
         // Wait for filterManager to be ready
-        let checkInterval = setInterval(() => {
+        let checkInterval, timeoutId;
+        
+        checkInterval = setInterval(() => {
             if (window.filterManager) {
                 clearInterval(checkInterval);
                 clearTimeout(timeoutId);
@@ -277,7 +279,7 @@ class FilterableTable extends HTMLElement {
             }
         }, 100);
         
-        const timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(() => {
             clearInterval(checkInterval);
             if (!window.filterManager) {
                 console.warn('⚠️  FilterManager not found after timeout');
