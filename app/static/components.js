@@ -149,7 +149,7 @@ class FilterDropdown extends HTMLElement {
 class FilterableTable extends HTMLElement {
     // Helper function to escape HTML to prevent XSS
     escapeHtml(text) {
-        if (text === null || text === undefined) return '';
+        if (text == null) return '';
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
@@ -190,7 +190,7 @@ class FilterableTable extends HTMLElement {
         } catch (error) {
             console.error(`❌ Error parsing columns for ${tableId}:`, error);
             console.error('Columns attribute value:', columnsAttr);
-            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table columns: ${error.message}</div>`;
+            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table columns: ${this.escapeHtml(error.message)}</div>`;
             return;
         }
 
@@ -201,7 +201,7 @@ class FilterableTable extends HTMLElement {
         } catch (error) {
             console.error(`❌ Error parsing data for ${tableId}:`, error);
             console.error('Data attribute value:', dataAttr ? dataAttr.substring(0, 200) : 'null');
-            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table data: ${error.message}</div>`;
+            this.innerHTML = `<div style="color: red; padding: 20px;">Error parsing table data: ${this.escapeHtml(error.message)}</div>`;
             return;
         }
 
@@ -263,9 +263,20 @@ class FilterableTable extends HTMLElement {
     }
     setupFiltering() {
         // Wait for filterManager to be ready
-        const checkFilterManager = setInterval(() => {
+        let checkInterval;
+        const timeoutId = setTimeout(() => {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+            if (!window.filterManager) {
+                console.warn('⚠️  FilterManager not found after timeout');
+            }
+        }, 5000);
+        
+        checkInterval = setInterval(() => {
             if (window.filterManager) {
-                clearInterval(checkFilterManager);
+                clearInterval(checkInterval);
+                clearTimeout(timeoutId);
                 
                 console.log(`🔗 FilterManager connected for ${this.tableId || 'table'}`);
                 
@@ -275,14 +286,6 @@ class FilterableTable extends HTMLElement {
                 });
             }
         }, 100);
-        
-        // Safety timeout to prevent infinite checking
-        setTimeout(() => {
-            clearInterval(checkFilterManager);
-            if (!window.filterManager) {
-                console.warn('⚠️  FilterManager not found after timeout');
-            }
-        }, 5000);
     }
 
     applyFilters(filters){
