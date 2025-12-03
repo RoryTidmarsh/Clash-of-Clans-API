@@ -6,11 +6,83 @@ import app.services.full_table as full_table
 from app.services.reading_WarData import WarDataManager, get_war_stats
 import app.services.graphs as graphs
 import pandas as pd
+import numpy as np
 import os
 from app.supabase_client import supabase
 
 
 bp = Blueprint('main', __name__)
+
+def clean_nan_values(data):
+    """
+    Replace NaN values with None in a list of dictionaries or DataFrame.
+    This ensures proper JSON serialization without NaN errors.
+    Handles nested structures recursively.
+    
+    Args:
+        data: Either a pandas DataFrame, list, dict, or primitive value
+        
+    Returns:
+        Cleaned data in the same format as input
+    """
+    if isinstance(data, pd.DataFrame):
+        return data.replace({np.nan: None})
+    elif isinstance(data, list):
+        cleaned_data = []
+        for item in data:
+            if isinstance(item, dict):
+                cleaned_row = {}
+                for key, value in item.items():
+                    try:
+                        # pd.isna() can handle scalar values including numpy types
+                        if pd.isna(value) and not isinstance(value, (list, dict)):
+                            cleaned_row[key] = None
+                        elif isinstance(value, (list, dict)):
+                            cleaned_row[key] = clean_nan_values(value)
+                        else:
+                            cleaned_row[key] = value
+                    except (TypeError, ValueError):
+                        # If pd.isna() fails (e.g., on complex objects), keep original
+                        if isinstance(value, (list, dict)):
+                            cleaned_row[key] = clean_nan_values(value)
+                        else:
+                            cleaned_row[key] = value
+                cleaned_data.append(cleaned_row)
+            elif isinstance(item, (list, dict)):
+                cleaned_data.append(clean_nan_values(item))
+            else:
+                try:
+                    if pd.isna(item):
+                        cleaned_data.append(None)
+                    else:
+                        cleaned_data.append(item)
+                except (TypeError, ValueError):
+                    cleaned_data.append(item)
+        return cleaned_data
+    elif isinstance(data, dict):
+        cleaned_dict = {}
+        for key, value in data.items():
+            try:
+                if pd.isna(value) and not isinstance(value, (list, dict)):
+                    cleaned_dict[key] = None
+                elif isinstance(value, (list, dict)):
+                    cleaned_dict[key] = clean_nan_values(value)
+                else:
+                    cleaned_dict[key] = value
+            except (TypeError, ValueError):
+                if isinstance(value, (list, dict)):
+                    cleaned_dict[key] = clean_nan_values(value)
+                else:
+                    cleaned_dict[key] = value
+        return cleaned_dict
+    else:
+        try:
+            if pd.isna(data):
+                return None
+        except (TypeError, ValueError):
+            pass
+    return data
+
 
 @bp.route('/', methods=['GET'])
 def index():
@@ -24,6 +96,10 @@ def index():
     # Translate and reorder columns
     page_data["recent_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["recent_stats"], ["season"])))
     page_data["all_time_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["all_time_stats"], ["season"])))
+    
+    # Clean NaN values to avoid JSON parsing errors
+    page_data["recent_stats"] = clean_nan_values(page_data["recent_stats"])
+    page_data["all_time_stats"] = clean_nan_values(page_data["all_time_stats"])
     
     # print(reorder_columns(page_data["recent_stats"][0]))
     
@@ -70,6 +146,9 @@ def war_table():
         # Handle empty or unexpected data
         war_data_list = []
         columns = []
+    
+    # Clean NaN values to avoid JSON parsing errors
+    war_data_list = clean_nan_values(war_data_list)
     
     # Debug logging
     print(f"🔍 War table debug:")
@@ -119,6 +198,9 @@ def progress_graphs():
 
     # prepare Chart.js data for the first y variable (or loop if multiple)
     chartjs_data = graphs.prepare_chartjs_data(grouped_data, y_variable=y_vars[0], x_variable="season")
+    
+    # Clean NaN values to avoid JSON parsing errors
+    chartjs_data = clean_nan_values(chartjs_data)
     
     # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
