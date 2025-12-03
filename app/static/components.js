@@ -508,29 +508,78 @@ class PageLayout extends HTMLElement {
         const logoUrl = this.getAttribute('logo-url') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
         const title = this.getAttribute('title') || 'Clan War League Stats';
         const favicon = this.getAttribute('favicon') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
+        const extraCss = this.getAttribute('extra-css') || ''; // Additional CSS URL if any
 
+        this.setupHead(title, favicon, extraCss);
+
+        const content = this.innerHTML;
+        this.innerHTML = `
+            <site-header logo-url="${logoUrl}" title="${title}" show-refresh="true"></site-header>
+            <nav-bar></nav-bar>
+            <main>
+                ${content}
+            </main>
+        `;
+
+        this.setRandomBackground();
+    }
+
+    setupHead(title, favicon, extraCss) {
+        // Set document title
         document.title = title;
-
-        if (favicon) {
-            let link = document.querySelector("link[rel*='icon']");
-            if (!link) {
-                link = document.createElement('link');
-                link.rel = 'icon';
-                link.type = 'image/png';
-                document.head.appendChild(link);
-            }
-            link.href = favicon;
+        
+        // Set charset if not already set
+        if (!document.querySelector('meta[charset]')) {
+        const charset = document.createElement('meta');
+        charset.setAttribute('charset', 'UTF-8');
+        document.head.insertBefore(charset, document.head.firstChild);
         }
-    const content = this.innerHTML;
-    this.innerHTML = `
-        <site-header logo-url="${logoUrl}" title="${title}" show-refresh="true"></site-header>
-        <nav-bar></nav-bar>
-        <main>
-            ${content}
-        </main>
-    `;
-
-    this.setRandomBackground();
+        
+        // Set viewport if not already set
+        if (!document.querySelector('meta[name="viewport"]')) {
+        const viewport = document.createElement('meta');
+        viewport.name = 'viewport';
+        viewport.content = 'width=device-width, initial-scale=1.0';
+        document.head.appendChild(viewport);
+        }
+        
+        // Add Google Fonts
+        if (!document.querySelector('link[href*="fonts.googleapis.com"]')) {
+        const fontLink = document.createElement('link');
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@600;400&display=swap';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+        }
+        
+        // Add main stylesheet
+        if (!document.querySelector('link[href*="style.css"]')) {
+        const styleLink = document.createElement('link');
+        styleLink.rel = 'stylesheet';
+        styleLink.href = '../static/style.css';
+        document.head.appendChild(styleLink);
+        }
+        
+        // Set favicon if provided
+        if (favicon) {
+        let link = document.querySelector("link[rel*='icon']");
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            link.type = 'image/png';
+            document.head.appendChild(link);
+        }
+        link.href = favicon;
+        }
+        
+        // Add any extra CSS files if specified (comma-separated)
+        if (extraCss) {
+        extraCss.split(',').forEach(cssFile => {
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = cssFile.trim();
+            document.head.appendChild(cssLink);
+        });
+        }
     }
     setRandomBackground() {
         const backgrounds = [
@@ -558,4 +607,4 @@ customElements.define('page-layout', PageLayout);
 // Initialise FilterManager globally
 window.filterManager = new FilterManager();
 
-console.log('🚀 Components loaded successfully');
+console.log('ðŸš€ Components loaded successfully');
