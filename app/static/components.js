@@ -2,7 +2,7 @@
 // COMPONENT 1: SITE HEADER
 // ========================================
 class SiteHeader extends HTMLElement {
-    connectedCallback() {
+    connectedCallBack() {
         // Get attributes for customisation
         const logoUrl = this.getAttribute('logo-url') || '';
         const title = this.getAttribute('title') || 'Clan War Leageue Stats'
@@ -62,7 +62,7 @@ class SiteHeader extends HTMLElement {
 // COMPONENT 2: NAV BAR
 // ========================================
 class NavBar extends HTMLElement {
-    connectedCallback() {
+    connectedCallBack() {
         const defaultLinks = [
             { href: '/', text: 'Home' },
             { href: '/war-table', text: 'War Table' },
@@ -88,7 +88,7 @@ class NavBar extends HTMLElement {
 // COMPONENT 3: FILTER DROPDOWNS
 // ========================================
 class FilterDropdown extends HTMLElement {
-    connectedCallback() {
+    connectedCallBack() {
         // Get attributes for customisation
         const filterType = this.getAttribute('filter-type') || 'filter';
         const filterLabel = this.getAttribute('filter-label') || 'Items';
@@ -98,8 +98,8 @@ class FilterDropdown extends HTMLElement {
 
         // Build dropdown HTML
         this.innerHTML = `
-            <label> Select ${filterLabel}:<\label>
-            <div class="multiselect-dropdown" data-filter-type="${filterType}"> 
+            <label> Select ${filterLabel}:</label>
+            <div class="multi-select-dropdown" data-filter-type="${filterType}"> 
                 <div class="multi-select-trigger" id="${filterType}-trigger">
                     <span>Select ${filterLabel}</span>
                     <div class="arrow">&#9660;</div>
@@ -145,7 +145,7 @@ class FilterableTable extends HTMLElement {
         this.innerHTML = `
             <section>
                 <h2>${title}</h2>
-                <table id="${tableId}"
+                <table id="${tableId}">
                     <thead>
                         <tr>
                             ${columns.map(col => `
@@ -171,7 +171,7 @@ class FilterableTable extends HTMLElement {
 
         // Store original data for filtering
         this.originalData = data;
-        this.filterColumn = filterColumn;
+        this.filterColumnIndex = parseInt(filterColumn);
         this.tableId = tableId;
 
         // Register with filter Manager
@@ -204,7 +204,7 @@ class FilterableTable extends HTMLElement {
 
         // Filter data based on selected values
         const filteredData = this.originalData.filter(row => {
-            const columnValue = Object.values(row)[this.filterColumnIndex];
+            const columnValue = String(Object.values(row)[this.filterColumnIndex]);
             return selectedValues.includes(columnValue);
         });
 
@@ -218,7 +218,7 @@ class FilterableTable extends HTMLElement {
 
     renderRows(data){
         const tbody = this.querySelector('tbody');
-        const columns = Object.keys(data[0] || {});
+        const columns = Object.keys(this.originalData[0] || {});
 
         // If no data, show no data message
         if (data.length === 0) {
@@ -243,7 +243,7 @@ class FilterableTable extends HTMLElement {
 // COMPONENT 5: FILTER CONTROLS
 // ========================================
 class FilterControls extends HTMLElement {
-    connectedCallback() {
+    connectedCallBack() {
         this.innerHTML = `
             <div class="filter-controls">
                 <button id="apply-filters" type="button" class="filter-button">Apply</button>
@@ -281,7 +281,7 @@ class FilterManager {
     }
 
     setupAllFilters() {
-        document.querySelectorAll('[data-filter-type]').forEach(dropdown => {
+        document.querySelectorAll('[data-filter-type]').forEach(filterGroup => {
             const filterType = filterGroup.dataset.filterType;
             this.setupFilter(filterType);
         });
@@ -295,7 +295,7 @@ class FilterManager {
         if (trigger && panel) {
             // Toggle panel visibility
             trigger.addEventListener('click', () => {
-                panel.classList.toggle('visible');
+                this.toggleDropdown(trigger, panel);
             });
         }
 
@@ -336,7 +336,7 @@ class FilterManager {
 
     setupApplyResetButtons() {
         // Get apply buttons and wire up event listeners
-        const applyButtons = document.querySelectorAll('[id*="apply"], .apply-filters, btn-apply');
+        const applyButtons = document.querySelectorAll('[id*="apply"], .apply-filters, .btn-apply');
         applyButtons.forEach(button => {
             button.addEventListener('click', () => {
                 this.applyFilters();
@@ -344,7 +344,7 @@ class FilterManager {
         });
 
         // Get reset buttons and wire up event listeners
-        const resetButtons = document.querySelectorAll('[id*="reset"], .reset-filters, btn-reset');
+        const resetButtons = document.querySelectorAll('[id*="reset"], .reset-filters, .btn-reset');
         resetButtons.forEach(button => {
             button.addEventListener('click', () => {
                 this.resetFilters();
@@ -422,16 +422,18 @@ class FilterManager {
     }
 
     applyAllFiltersToUI() {
-        document.querySelectorAll(`.${filterType}-checkbox`).forEach(checkbox => {
-            checkbox.checked = false;
-        });
+        Object.keys(this.filters).forEach(filterType => {  // FIXED: Loop through all filter types
+            document.querySelectorAll(`.${filterType}-checkbox`).forEach(checkbox => {
+                checkbox.checked = false;
+            });
 
-        this.filters[filterType].forEach(value => {
-            const checkbox = document.querySelector(`.${filterType}-checkbox[value="${value}"]`);
-            if (checkbox) checkbox.checked = true;
-        });
+            this.filters[filterType].forEach(value => {
+                const checkbox = document.querySelector(`.${filterType}-checkbox[value="${value}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
 
-        this.updateSelectAllState(`select-all-${filterType}`, `.${filterType}-checkbox`);
+            this.updateSelectAllState(`select-all-${filterType}`, `.${filterType}-checkbox`);
+        });
     }
 
     showFilterFeedback(message, type = 'info') {
@@ -509,6 +511,7 @@ class PageLayout extends HTMLElement {
         const title = this.getAttribute('title') || 'Clan War League Stats';
         const favicon = this.getAttribute('favicon') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
         const extraCss = this.getAttribute('extra-css') || ''; // Additional CSS URL if any
+        const showRefresh = this.getAttribute('show-refresh') || 'true';
 
         this.setupHead(title, favicon, extraCss);
 
@@ -607,4 +610,4 @@ customElements.define('page-layout', PageLayout);
 // Initialise FilterManager globally
 window.filterManager = new FilterManager();
 
-console.log('ðŸš€ Components loaded successfully');
+console.log('🚀 Components loaded successfully');
