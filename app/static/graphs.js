@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2,
+                maintainAspectRatio: true, // Keep consistent aspect ratio
+                aspectRatio: 2, // Width:height ratio (2:1 = landscape)
                 scales: {
                     xAxes: [{
                         scaleLabel: {
@@ -139,6 +139,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         usePointStyle: true,
                         padding: 15,
                         fontSize: 13
+                    }
+                },
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 10,
+                        top: 10,
+                        bottom: 10
                     }
                 }
             }

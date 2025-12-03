@@ -1,189 +1,186 @@
 {% extends "base.html" %}
 
-{% block title %}Clan War League Stats - Pussay Palace{% endblock %}
+{% block title %}War Data - Pussay Palace{% endblock %}
 
 {% block content %}
 <div class="main-data-box">
     <section id="filters">
-        <form method="get" action="/war-table">
-            
-            <label for="player">Players:</label>
-            <div class="multi-select-dropdown" style="display: inline-block; min-width: 200px;">
-                <button type="button" class="multi-select-trigger" id="player-trigger">
-                    <span id="filter-select">Select players</span>
-                    <span class="dropdown-arrow">▼</span>
-                </button> 
-                <div class="multi-select-panel" id="player-panel">
-                    <div>
-                        <label class="multi-select-option select-all-option">
-                            <input type="checkbox" id="select-all-players" checked>
-                            <span>Select All</span>
-                        </label>
-                        <hr class="multi-select-divider">
-                        
-                        {% if player_filter.players %}
-                            {% for player in player_filter.players %}
-                            <label class="multi-select-option">
-                                <input 
-                                    type="checkbox" 
-                                    class="player-checkbox" 
-                                    name="player"
-                                    value="{{ player }}"
-                                    {% if not filters.selected_players or player in filters.selected_players %}checked{% endif %}
-                                >
-                                <span>{{ player }}</span>
-                            </label>
-                            {% endfor %}
-                        {% else %}
-                            <div style="padding: 10px; color: red;">
-                                ⚠️ No players found!
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <label for="season">Season:</label>
-            <select name="season" id="season">
-                <option value="">All</option>
-                {% for season in season_filter.season %}
-                <option value="{{ season }}" {% if filters.selected_season == season %}selected{% endif %}>{{ season }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit">Apply Filters</button>
-        </form>
-    </section>
-    <hr>
-    <section id="war-data-table-section">
-        <h2>War Data Table</h2>
+        <!-- Players Filter -->
+        {% set filter_type = 'players' %}
+        {% set filter_label = 'Players' %}
+        {% set filter_options = all_players %}
+        {% include 'filters.html' %}
         
-        {% if war_data and columns %}
-        <div class="table-container">
-            <table id="war-data-table" class="war-data-table">
-                <thead>
-                    <tr>
-                        {% for column in columns %}
-                        <th class="sortable">
-                            <button class="sortable-button" data-column="{{ column }}">
-                                {{ column }}
-                                <span class="sort-icon">▲</span>
-                            </button>
-                        </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in war_data %}
-                    <tr>
-                        {% for column in columns %}
-                        <td>{{ row[column] if row[column] is not none else '' }}</td>
-                        {% endfor %}
-                    </tr>
+        <!-- Seasons Filter -->
+        {% set filter_type = 'seasons' %}
+        {% set filter_label = 'Seasons' %}
+        {% set filter_options = all_seasons %}
+        {% include 'filters.html' %}
+        
+        <button id="apply-filters" type="button">Apply Filters</button>
+        <button id="reset-filters" type="button">Reset</button>
+    </section>
+    
+    <hr>
+    
+    <section id="war-data">
+        <h2>War Data</h2>
+        {% if war_data %}
+        <table id="war-data-table">
+            <thead>
+                <tr>
+                    {% for column in war_data[0].keys() %}
+                    <th class="sortable">
+                        <button class="sortable-button" data-column="{{ column }}">
+                            {{ column }}
+                            <span class="sort-icon">▲</span>
+                        </button>
+                    </th>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in war_data %}
+                <tr>
+                    {% for value in row.values() %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(216, 213, 213, 0.968); border-radius: 8px;">
-            <p style="font-size: 18px; color: #666;">
-                📋 No war data to display
-            </p>
-            <p style="color: #888;">
-                Select players and season, then apply filters to view war data
-            </p>
-        </div>
+        <p>No war data available.</p>
         {% endif %}
     </section>
 </div>
 
-
 <script>
-// Multi-select dropdown functionality for war_data.html
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 War Data page loaded!');
+    console.log('🚀 War Data page loaded');
     
-    // Get elements
-    const playerTrigger = document.getElementById('player-trigger');
-    const playerPanel = document.getElementById('player-panel');
-    const selectAllCheckbox = document.getElementById('select-all-players');
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox');
+    // Store original table data for client-side filtering
+    const originalWarData = Array.from(document.querySelectorAll('#war-data-table tbody tr'));
     
-    // Toggle dropdown when clicking the button
-    if (playerTrigger) {
-        playerTrigger.addEventListener('click', function(e) {
-            e.stopPropagation();
-            playerPanel.classList.toggle('show');
+    // Listen for when filters are applied
+    window.filterManager.onApply((appliedFilters) => {
+        console.log('Filters applied:', appliedFilters);
+        updateWarDataTable(appliedFilters);
+    });
+    
+    function updateWarDataTable(filters) {
+        const selectedPlayers = filters.players || [];
+        const selectedSeasons = filters.seasons || [];
+        
+        console.log('Selected players:', selectedPlayers);
+        console.log('Selected seasons:', selectedSeasons);
+        
+        // If no filters selected, show all data
+        if (selectedPlayers.length === 0 && selectedSeasons.length === 0) {
+            showAllRows(originalWarData);
+            return;
+        }
+        
+        // Filter the data
+        filterWarDataTable(originalWarData, selectedPlayers, selectedSeasons);
+    }
+    
+    function filterWarDataTable(originalRows, selectedPlayers, selectedSeasons) {
+        const tbody = document.querySelector('#war-data-table tbody');
+        
+        // Clear current table
+        tbody.innerHTML = '';
+        
+        // Filter rows based on selected criteria
+        const filteredRows = originalRows.filter(row => {
+            const cells = row.cells;
+            
+            // Adjust these indices based on your table structure
+            const playerName = cells[0].textContent.trim(); // Assuming player name is first column
+            const season = cells[1].textContent.trim(); // Assuming season is second column
+            
+            // Check player filter
+            const playerMatch = selectedPlayers.length === 0 || selectedPlayers.includes(playerName);
+            
+            // Check season filter
+            const seasonMatch = selectedSeasons.length === 0 || selectedSeasons.includes(season);
+            
+            return playerMatch && seasonMatch;
+        });
+        
+        // Add filtered rows back to table
+        filteredRows.forEach(row => {
+            tbody.appendChild(row.cloneNode(true));
+        });
+        
+        // Show message if no results
+        if (filteredRows.length === 0) {
+            showNoResults(tbody);
+        }
+        
+        console.log(`Filtered ${filteredRows.length} rows from ${originalRows.length} total`);
+    }
+    
+    function showAllRows(originalRows) {
+        const tbody = document.querySelector('#war-data-table tbody');
+        tbody.innerHTML = '';
+        originalRows.forEach(row => {
+            tbody.appendChild(row.cloneNode(true));
         });
     }
     
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (playerPanel && !playerPanel.contains(e.target) && e.target !== playerTrigger) {
-            playerPanel.classList.remove('show');
-        }
-    });
+    function showNoResults(tbody) {
+        const noResultsRow = document.createElement('tr');
+        const noResultsCell = document.createElement('td');
+        const columnCount = document.querySelectorAll('#war-data-table thead th').length;
+        
+        noResultsCell.setAttribute('colspan', columnCount);
+        noResultsCell.textContent = 'No data found matching the selected filters';
+        noResultsCell.style.textAlign = 'center';
+        noResultsCell.style.fontStyle = 'italic';
+        noResultsCell.style.color = '#666';
+        noResultsCell.style.padding = '20px';
+        
+        noResultsRow.appendChild(noResultsCell);
+        tbody.appendChild(noResultsRow);
+    }
     
-    // "Select All" checkbox functionality
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            const isChecked = this.checked;
-            playerCheckboxes.forEach(cb => {
-                cb.checked = isChecked;
+    // Table sorting functionality
+    function makeTableSortable(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        const headers = table.querySelectorAll("th.sortable");
+        
+        headers.forEach((header) => {
+            let sortDirection = 1;
+            header.addEventListener("click", function () {
+                const columnIndex = Array.prototype.indexOf.call(headers, this);
+                const rows = Array.from(table.querySelector("tbody").rows);
+                
+                rows.sort((rowA, rowB) => {
+                    const cellA = rowA.cells[columnIndex].innerText.trim();
+                    const cellB = rowB.cells[columnIndex].innerText.trim();
+                    
+                    const valueA = isNaN(cellA) ? cellA : parseFloat(cellA);
+                    const valueB = isNaN(cellB) ? cellB : parseFloat(cellB);
+                    
+                    return sortDirection * (valueA > valueB ? 1 : valueA < valueB ? -1 : 0);
+                });
+                
+                const tbody = table.querySelector("tbody");
+                rows.forEach((row) => tbody.appendChild(row));
+                
+                sortDirection *= -1;
+                
+                headers.forEach((h) => h.querySelector(".sort-icon").innerText = "▲");
+                this.querySelector(".sort-icon").innerText = sortDirection === 1 ? "▲" : "▼";
             });
-            updateFilterDisplay();
         });
     }
     
-    // Update display when individual checkboxes change
-    playerCheckboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            updateFilterDisplay();
-            
-            // Update "Select All" checkbox state
-            const allChecked = Array.from(playerCheckboxes).every(c => c.checked);
-            const noneChecked = Array.from(playerCheckboxes).every(c => !c.checked);
-            
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = allChecked;
-                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
-            }
-        });
-    });
-    
-    // Function to update the button text showing selection
-    function updateFilterDisplay() {
-        const selected = Array.from(playerCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-        
-        const filterSelect = document.getElementById('filter-select');
-        if (!filterSelect) return;
-        
-        if (selected.length === 0) {
-            filterSelect.textContent = 'Select players';
-        } else if (selected.length === playerCheckboxes.length) {
-            filterSelect.textContent = 'All players';
-        } else if (selected.length === 1) {
-            filterSelect.textContent = selected[0];
-        } else {
-            filterSelect.textContent = `${selected.length} players selected`;
-        }
-    }
-    
-    // Initialize filter display and select all state
-    if (playerCheckboxes.length > 0) {
-        updateFilterDisplay();
-        
-        // Update "Select All" checkbox initial state
-        const allChecked = Array.from(playerCheckboxes).every(c => c.checked);
-        const noneChecked = Array.from(playerCheckboxes).every(c => !c.checked);
-        
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
-        }
-    }
+    // Initialize table sorting
+    makeTableSortable("war-data-table");
 });
 </script>
-
 {% endblock %}

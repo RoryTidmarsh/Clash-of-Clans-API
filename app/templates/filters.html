@@ -1,0 +1,25 @@
+<!-- Reusable Multi-Select Filter Component -->
+<label>Select {{ filter_label }}:</label>
+<div class="multi-select-dropdown" data-filter-type="{{ filter_type }}">
+    
+    <div class="multi-select-trigger" id="{{ filter_type }}-trigger">
+        <span>Choose {{ filter_label }}</span>
+        <span class="dropdown-arrow">▼</span>
+    </div>
+    <div class="multi-select-panel" id="{{ filter_type }}-panel">
+        <div class="multi-select-option select-all-option">
+            <input type="checkbox" id="select-all-{{ filter_type }}">
+            <span>Select All</span>
+        </div>
+        {% if filter_options %}
+            {% for option in filter_options %}
+            <div class="multi-select-option">
+                <input type="checkbox" 
+                       class="{{ filter_type }}-checkbox" 
+                       value="{% if filter_value_key %}{{ option[filter_value_key] }}{% else %}{{ option }}{% endif %}">
+                <span>{% if filter_display_key %}{{ option[filter_display_key] }}{% else %}{{ option }}{% endif %}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>

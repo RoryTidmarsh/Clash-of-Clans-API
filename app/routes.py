@@ -33,7 +33,8 @@ def index():
         "index.html",
         filters=page_data["filters"],
         recent_stats=page_data["recent_stats"],
-        all_time_stats=page_data["all_time_stats"]
+        all_time_stats=page_data["all_time_stats"],
+        all_players=index_data.get_all_players(),
     )
 
 @bp.route('/coming-soon', methods=['GET'])
@@ -76,24 +77,15 @@ def war_table():
     # Get all available options for dropdowns
     all_players = index_data.get_all_players()
     all_seasons = index_data.get_all_seasons()
-    
-    # Create filter objects that match template expectations
-    player_filter_obj = {'players': all_players}
-    season_filter_obj = {'season': all_seasons}
-    
-    # Create filters object for tracking selections
-    filters_obj = {
-        'selected_players': selected_players,
-        'selected_season': season_filter
-    }
 
     return render_template("war_data.html",
         war_data=war_data_list,
         columns=columns,
-        player_filter=player_filter_obj,
-        season_filter=season_filter_obj,
-        filters=filters_obj
-        )
+        all_players=all_players,        # Required for universal filters
+        all_seasons=all_seasons,        # Required for universal filters
+        selected_players=selected_players,  # For maintaining state
+        selected_season=season_filter      # For maintaining state
+    )
 
 @bp.route('/progress-graphs', methods=['GET'])
 def progress_graphs():
