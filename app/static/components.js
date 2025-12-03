@@ -187,6 +187,10 @@ class FilterableTable extends HTMLElement {
         this.originalData = data;
         this.filterColumnIndex = parseInt(filterColumn);
         this.tableId = tableId;
+        this.columns = columns;
+
+        // Setup sorting immediately after table creation
+        this.setupSorting(columns);
 
         // Register with filter Manager
         this.setupFiltering();
@@ -252,10 +256,8 @@ class FilterableTable extends HTMLElement {
 
     renderRows(data){
         const tbody = this.querySelector('tbody');
-        // Get columns from the table header instead of the data object
-        const columns = Array.from(this.querySelector('thead tr').querySelectorAll('th')).map(th => {
-            return th.textContent.trim().replace('▾', '').trim();
-        });
+        // Use stored columns instead of parsing from header
+        const columns = this.columns;
 
         // If no data, show no data message
         if (data.length === 0) {
@@ -274,63 +276,122 @@ class FilterableTable extends HTMLElement {
             </tr>
         `).join('');
 
-        // Add sorting functionality to headers
-        this.setupSorting(columns);
+        // Store the current data for sorting
+        this.currentData = data;
+        
+        // Reset sort state when data changes
+        this.currentSortColumn = null;
+        this.sortDirection = 1;
+        
+        // Update sort icons
+        const headers = this.querySelectorAll('thead th.sortable');
+        headers.forEach(h => {
+            const icon = h.querySelector('.sort-icon');
+            if (icon) {
+                icon.textContent = '▾';
+            }
+            h.style.opacity = '0.6';
+        });
 }
 
 setupSorting(columns) {
     const table = this.querySelector('table');
     const headers = this.querySelectorAll('thead th.sortable');
     const tbody = this.querySelector('tbody');
-    let currentSortColumn = null;
-    let sortDirection = 1; // 1 for ascending, -1 for descending
+    
+    // Initialize sorting state on the instance
+    if (!this.currentSortColumn) {
+        this.currentSortColumn = null;
+        this.sortDirection = 1; // 1 for ascending, -1 for descending
+    }
+    
+    // Store current data for sorting (initialize with original data)
+    if (!this.currentData) {
+        this.currentData = [...this.originalData];
+    }
 
     headers.forEach((header, index) => {
-        header.style.cursor = 'pointer';
+        const button = header.querySelector('.sortable-button');
+        if (!button) return;
         
-        header.addEventListener('click', () => {
+        button.style.cursor = 'pointer';
+        
+        // Remove any existing event listeners by cloning and replacing
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        newButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const columnName = columns[index];
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Get current data to sort
+            const dataToSort = [...this.currentData];
 
             // Skip if no data rows
-            if (rows.length === 0) return;
+            if (dataToSort.length === 0) return;
 
             // If clicking the same column, toggle direction
-            if (currentSortColumn === columnName) {
-                sortDirection *= -1;
+            if (this.currentSortColumn === columnName) {
+                this.sortDirection *= -1;
             } else {
-                sortDirection = 1;
-                currentSortColumn = columnName;
+                this.sortDirection = 1;
+                this.currentSortColumn = columnName;
             }
 
-            // Sort the rows
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[index].textContent.trim();
-                const cellB = rowB.cells[index].textContent.trim();
+            // Sort the data array
+            dataToSort.sort((rowA, rowB) => {
+                const cellA = rowA[columnName];
+                const cellB = rowB[columnName];
+
+                // Handle null/undefined values
+                if (cellA == null && cellB == null) return 0;
+                if (cellA == null) return 1;
+                if (cellB == null) return -1;
+
+                // Convert to string for comparison
+                const strA = String(cellA).trim();
+                const strB = String(cellB).trim();
 
                 // Try to parse as numbers
-                const valueA = isNaN(cellA) ? cellA.toLowerCase() : parseFloat(cellA);
-                const valueB = isNaN(cellB) ? cellB.toLowerCase() : parseFloat(cellB);
-
-                if (valueA > valueB) return sortDirection;
-                if (valueA < valueB) return -sortDirection;
-                return 0;
+                const numA = parseFloat(strA);
+                const numB = parseFloat(strB);
+                
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    // Both are numbers
+                    return (numA - numB) * this.sortDirection;
+                } else {
+                    // String comparison
+                    const compareResult = strA.toLowerCase().localeCompare(strB.toLowerCase());
+                    return compareResult * this.sortDirection;
+                }
             });
 
-            // Re-append sorted rows to tbody
-            rows.forEach(row => tbody.appendChild(row));
+            // Re-render the table with sorted data
+            tbody.innerHTML = dataToSort.map(row => `
+                <tr>
+                    ${columns.map(col => `<td>${row[col] != null ? row[col] : ''}</td>`).join('')}
+                </tr>
+            `).join('');
 
             // Update sort icons on all headers
             headers.forEach(h => {
-                h.querySelector('.sort-icon').textContent = '▾';
+                const icon = h.querySelector('.sort-icon');
+                if (icon) {
+                    icon.textContent = '▾';
+                }
                 h.style.opacity = '0.6';
             });
             
             // Highlight active column
-            header.querySelector('.sort-icon').textContent = sortDirection === 1 ? '▾' : '▴';
+            const activeIcon = newButton.querySelector('.sort-icon');
+            if (activeIcon) {
+                activeIcon.textContent = this.sortDirection === 1 ? '▾' : '▴';
+            }
             header.style.opacity = '1';
 
-            console.log(`📊 Sorted by ${columnName} (${sortDirection === 1 ? 'ASC' : 'DESC'})`);
+            console.log(`📊 Sorted by ${columnName} (${this.sortDirection === 1 ? 'ASC' : 'DESC'})`);
         });
     });
 }
