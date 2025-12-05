@@ -21,10 +21,13 @@
         <filterable-table
             table-id="recent-stats-table"
             title="Recent Clan War League Stats"
-            columns='{{ recent_stats[0].keys() | list | tojson }}'
+            columns='{{ recent_columns | tojson }}'
             data='{{ recent_stats | tojson }}'
             filter-column="0">
         </filterable-table>
+        <script>
+            console.log("Recent Stats Data:", {{ recent_stats | tojson }});
+        </script>
         {% else %}
         <div style="text-align: center; padding: 20px; color: #999;">
             <a> No recent stats data available</a>
@@ -37,10 +40,13 @@
         <filterable-table
             table-id="all-time-stats-table"
             title="All Time War Stats (Averaged)"
-            columns='{{ all_time_stats[0].keys() | list | tojson }}'
+            columns='{{ all_time_columns | tojson }}'
             data='{{ all_time_stats | tojson }}'
             filter-column="0">
         </filterable-table>
+        <script>
+            console.log("Recent Stats Data:", {{ recent_stats | tojson }});
+        </script>
         {% else %}
         <div style="text-align: center; padding: 20px; color: #999;">No all-time stats data available</div>
         {% endif %}

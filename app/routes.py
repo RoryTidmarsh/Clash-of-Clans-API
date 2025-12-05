@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, Response
-import app.services.index_data as index_data
-import app.services.process_data as process_data
+import app.services.index_data as ID
+import app.services.process_data as PD
 from app.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
 import app.services.full_table as full_table
 from app.services.reading_WarData import WarDataManager, get_war_stats
@@ -13,104 +13,48 @@ from app.supabase_client import supabase
 
 bp = Blueprint('main', __name__)
 
-def clean_nan_values(data):
-    """
-    Replace NaN values with None in a list of dictionaries or DataFrame.
-    This ensures proper JSON serialization without NaN errors.
-    Handles nested structures recursively.
-    
-    Args:
-        data: Either a pandas DataFrame, list, dict, or primitive value
-        
-    Returns:
-        Cleaned data in the same format as input
-    """
-    if isinstance(data, pd.DataFrame):
-        return data.replace({np.nan: None})
-    elif isinstance(data, list):
-        cleaned_data = []
-        for item in data:
-            if isinstance(item, dict):
-                cleaned_row = {}
-                for key, value in item.items():
-                    try:
-                        # pd.isna() can handle scalar values including numpy types
-                        if pd.isna(value) and not isinstance(value, (list, dict)):
-                            cleaned_row[key] = None
-                        elif isinstance(value, (list, dict)):
-                            cleaned_row[key] = clean_nan_values(value)
-                        else:
-                            cleaned_row[key] = value
-                    except (TypeError, ValueError):
-                        # If pd.isna() fails (e.g., on complex objects), keep original
-                        if isinstance(value, (list, dict)):
-                            cleaned_row[key] = clean_nan_values(value)
-                        else:
-                            cleaned_row[key] = value
-                cleaned_data.append(cleaned_row)
-            elif isinstance(item, (list, dict)):
-                cleaned_data.append(clean_nan_values(item))
-            else:
-                try:
-                    if pd.isna(item):
-                        cleaned_data.append(None)
-                    else:
-                        cleaned_data.append(item)
-                except (TypeError, ValueError):
-                    cleaned_data.append(item)
-        return cleaned_data
-    elif isinstance(data, dict):
-        cleaned_dict = {}
-        for key, value in data.items():
-            try:
-                if pd.isna(value) and not isinstance(value, (list, dict)):
-                    cleaned_dict[key] = None
-                elif isinstance(value, (list, dict)):
-                    cleaned_dict[key] = clean_nan_values(value)
-                else:
-                    cleaned_dict[key] = value
-            except (TypeError, ValueError):
-                if isinstance(value, (list, dict)):
-                    cleaned_dict[key] = clean_nan_values(value)
-                else:
-                    cleaned_dict[key] = value
-        return cleaned_dict
-    else:
-        try:
-            if pd.isna(data):
-                return None
-        except (TypeError, ValueError):
-            pass
-    return data
+
 
 
 @bp.route('/', methods=['GET'])
 def index():
     # Get filters from request args
-    season_filter = request.args.get("season")  # Get the "season" query parameter, if provided
     player_filter = request.args.get("player")  # Get the "player" query parameter, if provided
 
     # Fetch raw data
-    page_data = index_data.get_index_data(season_filter, player_filter)
+    page_data = ID.get_index_data(player_filter)
 
     # Translate and reorder columns
-    page_data["recent_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["recent_stats"], ["season"])))
-    page_data["all_time_stats"] = process_data.translate_columns(process_data.reorder_columns(process_data.remove_columns(page_data["all_time_stats"], ["season"])))
+    recent_data = page_data["recent_stats"]
+    all_time_data = page_data["all_time_stats"]
+    filters = page_data["filters"]
     
-    # Clean NaN values to avoid JSON parsing errors
-    page_data["recent_stats"] = clean_nan_values(page_data["recent_stats"])
-    page_data["all_time_stats"] = clean_nan_values(page_data["all_time_stats"])
-    
-    # print(reorder_columns(page_data["recent_stats"][0]))
-    
+    # Process data to correct columns, order and translations
+    recent_data = PD.process_data(recent_data)
+    all_time_data = PD.process_data(all_time_data)
+
+    assert isinstance(recent_data, pd.DataFrame)
+    assert isinstance(all_time_data, pd.DataFrame)
+
+    # extract column names - required in Pandas to get cols
+    recent_colunmns = list(recent_data.columns)
+    all_time_columns = list(all_time_data.columns)
+
+    # Convert DataFrames to JSON-compatible format
+    recent_data = PD.Pandas_to_Json(recent_data)
+    all_time_data = PD.Pandas_to_Json(all_time_data)
+    assert isinstance(recent_data, str)
+    assert isinstance(all_time_data, str)
 
     # Render the template with translated and reordered column names
     return render_template(
         "index.html",
-        filters=page_data["filters"],
-        recent_stats=page_data["recent_stats"],
-        all_time_stats=page_data["all_time_stats"],
-        all_players=index_data.get_all_players(),
+        filters=filters,
+        recent_stats=recent_data,
+        all_time_stats=all_time_data,
+        recent_columns=recent_colunmns,
+        all_time_columns=all_time_columns,
+        all_players=ID.get_all_players(),
     )
 
 @bp.route('/coming-soon', methods=['GET'])
@@ -133,37 +77,26 @@ def war_table():
         player_filter = None
 
     war_data = full_table.get_full_table_data(season_filter, player_filter)
-    war_data = process_data.translate_columns(process_data.reorder_columns(war_data))
-    
-    # Convert DataFrame to list of dictionaries for template compatibility
-    if isinstance(war_data, pd.DataFrame):
-        war_data_list = war_data.to_dict('records')  # Convert to list of dicts
-        columns = list(war_data.columns)  # Get column names
-    elif isinstance(war_data, list) and len(war_data) > 0:
-        war_data_list = war_data
-        columns = list(war_data[0].keys()) if war_data else []
-    else:
-        # Handle empty or unexpected data
-        war_data_list = []
-        columns = []
-    
-    # Clean NaN values to avoid JSON parsing errors
-    war_data_list = clean_nan_values(war_data_list)
+    assert isinstance(war_data, pd.DataFrame)
+    war_data = PD.process_data(PD.reorder_columns(war_data))
+    assert isinstance(war_data, pd.DataFrame)
+    columns = list(war_data.columns)
+
+    # Convert to JSON-compatible format
+    war_data_JSON = PD.Pandas_to_Json(war_data)
     
     # Debug logging
     print(f"🔍 War table debug:")
     print(f"  - War data type: {type(war_data)}")
-    print(f"  - War data length: {len(war_data_list)}")
+    print(f"  - War data length: {len(war_data_JSON)}")
     print(f"  - Columns: {columns}")
-    if war_data_list:
-        print(f"  - First row keys: {list(war_data_list[0].keys())}")
     
     # Get all available options for dropdowns
-    all_players = index_data.get_all_players()
-    all_seasons = index_data.get_all_seasons()
+    all_players = ID.get_all_players()
+    all_seasons = ID.get_all_seasons()
 
     return render_template("war_data.html",
-        war_data=war_data_list,
+        war_data=war_data_JSON,
         columns=columns,
         all_players=all_players,
         all_seasons=all_seasons,
@@ -181,32 +114,29 @@ def progress_graphs():
     # Build available_stats from COLUMNTRANSLATIONS excluding drop_stats
     available_stats = [
         {"value": key, "label": (label or key)}
-        for key, label in process_data.COLUMN_TRANSLATIONS.items()
+        for key, label in PD.COLUMN_TRANSLATIONS.items()
         if key not in drop_stats
     ]
-    available_stats.sort(key=process_data.get_priority_index)
+    available_stats.sort(key=PD.get_priority_index)
 
     # Fetch all players for filter options
-    all_players = index_data.get_all_players()
-    print(f"All players for filter: {all_players}")
+    all_players = ID.get_all_players()
+    
     # Load the real data
     y_vars = ["attack_stars"] # Default Y variable(s)
     grouped_data, labels = graphs.fetch_graph_data(y_vars, x_variable="season", player_filter=None)
 
-    # trial data for testing
-    trial_data = pd.DataFrame({"season": ["2025-09", "2025-10","2025-11","2025-09","2025-11"], "name": ["rozzledog 72","rozzledog 72","rozzledog 72", "conan_1014", 'conan_1014'], "attack_stars": [2.7,2.6,1.65,3.0,1.5]})
-
     # prepare Chart.js data for the first y variable (or loop if multiple)
     chartjs_data = graphs.prepare_chartjs_data(grouped_data, y_variable=y_vars[0], x_variable="season")
     
-    # Clean NaN values to avoid JSON parsing errors
-    chartjs_data = clean_nan_values(chartjs_data)
+    # Convert to JSON-compatible format
+    chartjs_data =  PD.Pandas_to_Json(chartjs_data)
     
     # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
                            chartjs_data=chartjs_data,
                            x_label="season",
-                           y_label=process_data.COLUMN_TRANSLATIONS.get(y_vars[0]),
+                           y_label=PD.COLUMN_TRANSLATIONS.get(y_vars[0]),
                            all_players = all_players,
                            available_stats = available_stats)
 
