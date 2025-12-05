@@ -130,7 +130,7 @@ def progress_graphs():
     chartjs_data = graphs.prepare_chartjs_data(grouped_data, y_variable=y_vars[0], x_variable="season")
     
     # Convert to JSON-compatible format
-    chartjs_data =  PD.Pandas_to_Json(chartjs_data)
+    # chartjs_data =  PD.Pandas_to_Json(chartjs_data)
     
     # pass the prepared structure to the template; use Jinja's tojson in template
     return render_template("graphs.html",
