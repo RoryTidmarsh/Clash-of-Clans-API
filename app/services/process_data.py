@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 # Universal dictionary for column translations with user-friendly names and emojis
 COLUMN_TRANSLATIONS = {
     "tag": "🏷️ Tag",
@@ -72,6 +73,12 @@ def translate_columns(data):
             translated_data.append(translated_row)
         return pd.DataFrame(translated_data)
 
+def replace_nan(data):
+    """Replace NaN values in DataFrame with None for JSON compatibility."""
+    if isinstance(data, pd.DataFrame):
+        return data.replace({np.nan: None})
+    else:
+        raise TypeError(f"Input data must be a pandas DataFrame, got {type(data).__name__}")
 
 def reorder_columns(data):
     """
@@ -137,7 +144,7 @@ def Pandas_to_Json(data):
         data_JSON = data.to_dict(orient='records')
         if not isinstance(data_JSON, list):
             raise TypeError(f"Converted data must be a list of dictionaries, got {type(data_JSON).__name__}")
-        return data.to_json(orient='records')
+        return json.dumps(data_JSON)
     else:
         raise TypeError(f"Input data must be a pandas DataFrame, got {type(data).__name__}")
     
@@ -153,6 +160,9 @@ def process_data(data, drop_stats=None):
     """
     # Initial type check
     check_Pandas(data, stage="received from backend")
+
+    # Replace NaN values with None
+    data = replace_nan(data)
 
     # Remove specified columns if any
     if drop_stats:
@@ -196,7 +206,7 @@ if __name__ == "__main__":
     })
 
     import app.services.index_data as ID
-    actual_data = ID.get_index_data("conan_1014") # returns dict with recent_stats, all_time_stats, filters
+    actual_data = ID.get_index_data() # returns dict with recent_stats, all_time_stats, filters
     # print(actual_data)
     recent_stats = actual_data["recent_stats"]
     all_time_stats = actual_data["all_time_stats"] 
@@ -214,5 +224,10 @@ if __name__ == "__main__":
     json_data = Pandas_to_Json(processed_data)
     print("\nJSON-compatible Data:")
     print(json_data)
-
     assert isinstance(json_data, str)
+    print(len(json_data))
+
+    # columns = list(processed_data.columns)
+    # print("\nFinal Columns:")
+    # print(columns)
+    # print(type(columns))

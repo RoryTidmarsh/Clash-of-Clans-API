@@ -90,7 +90,7 @@ def calculate_averages_by_player(dataset, columns):
         # Check we have data and if so then proceed
         if isinstance(dataset, pd.DataFrame) and not dataset.empty:
             # group by name and calculate mean for specified columns
-            grouped_df = dataset.groupby("name")[columns].mean(numeric_only=True)
+            grouped_df = dataset.groupby("name")[columns].mean(numeric_only=True).round(2)
             grouped_df = grouped_df.reset_index() # Reset index to have 'name' as a column
             
             return grouped_df
