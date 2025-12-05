@@ -271,7 +271,8 @@ class FilterableTable extends HTMLElement {
                 clearTimeout(timeoutId);
                 
                 console.log(`🔗 FilterManager connected for ${this.tableId || 'table'}`);
-                
+                //Log current filters
+                console.log('🎯 Current filters:', window.filterManager.getAppliedFilters());
                 // Listen for filter changes
                 window.filterManager.onApply((appliedFilters) => {
                 this.applyFilters(appliedFilters);
@@ -288,35 +289,41 @@ class FilterableTable extends HTMLElement {
     }
 
     applyFilters(filters){
-        const filterType = Object.keys(filters)[0]; // get the first filter type
-        const selectedValues = filters[filterType] || [];
-    
-        // if no filters applied, show all data
-        if (selectedValues.length === 0) {
+        console.log(`🔍 applyFilters called with filters:`, filters);
+
+        // Get all filter types
+        const filterTypes = Object.keys(filters);
+        
+        if (filterTypes.length === 0) {
             this.renderRows(this.originalData);
             return;
         }
-    
-        // Dynamically find the column that matches the filter type
-        // Try to match based on filter type name in column headers
-        const columnName = this.columns.find(col => {
-            const colLower = col.toLowerCase();
-            const filterLower = filterType.toLowerCase();
-            return colLower.includes(filterLower) || filterLower.includes(colLower.replace(/[^a-z0-9]/g, ''));
-        }) || filterType;
-    
-        console.log(`🔍 Filter type: ${filterType}, Matched column: ${columnName}`);
-        console.log('� Available columns:', this.columns);
-    
-        // Filter data based on selected values
+
+        // Filter data by ALL active filters
         const filteredData = this.originalData.filter(row => {
-            const columnValue = String(row[columnName] || '');
-            return selectedValues.includes(columnValue);
+            // Row must match ALL filter conditions
+            return filterTypes.every(filterType => {
+                const selectedValues = filters[filterType] || [];
+                
+                // Skip if no values selected for this filter
+                if (selectedValues.length === 0) return true;
+
+                // Find matching column
+                const columnName = this.columns.find(col => {
+                    const colLower = col.toLowerCase();
+                    const filterLower = filterType.toLowerCase();
+                    const colClean = col.replace(/[^a-z0-9]/g, '').toLowerCase();
+                    return colLower.includes(filterLower) || filterLower.includes(colClean);
+                }) || filterType;
+
+                const columnValue = String(row[columnName] || '');
+                const matches = selectedValues.includes(columnValue);
+            
+                return matches;
+            });
         });
-    
-        console.log(`✅ Filtering by ${columnName}:`, {selectedValues, matchedRows: filteredData.length});
-    
-        // Render filtered rows
+
+        console.log(`✅ Filtered by ${filterTypes.join(', ')}:`, {matchedRows: filteredData.length});
         this.renderRows(filteredData);
     }
 

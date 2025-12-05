@@ -25,10 +25,6 @@
             data='{{ recent_stats }}'
             filter-column="0">
         </filterable-table>
-        <script>
-            // Debug: log length of recent_stats
-            console.log("HTML, Recent Stats Length:", Object.keys({{ recent_stats}}).length);
-        </script>
         {% else %}
         <div style="text-align: center; padding: 20px; color: #999;">
             <a> No recent stats data available</a>
@@ -45,10 +41,6 @@
             data='{{ all_time_stats }}'
             filter-column="0">
         </filterable-table>
-        <script>
-            // Debug: log length of all_time_stats
-            console.log("HTML, All Time Stats Length:", {{ all_time_stats | length }});
-        </script>
         {% else %}
         <div style="text-align: center; padding: 20px; color: #999;">No all-time stats data available</div>
         {% endif %}

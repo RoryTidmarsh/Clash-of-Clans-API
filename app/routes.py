@@ -66,7 +66,7 @@ def coming_soon():
 def war_table():
     # Handle multiple players from multi-select dropdown
     selected_players = request.args.getlist("player")  # Get list of selected players
-    season_filter = request.args.get("season")  # Get the "season" query parameter, if provided
+    season_filter = request.args.getlist("season")  # Get the "season" query parameter, if provided
     
     # Convert list to single value for backward compatibility with existing functions
     if len(selected_players) == 1:
@@ -78,7 +78,7 @@ def war_table():
 
     war_data = full_table.get_full_table_data(season_filter, player_filter)
     assert isinstance(war_data, pd.DataFrame)
-    war_data = PD.process_data(PD.reorder_columns(war_data))
+    war_data = PD.replace_nan(PD.translate_columns(PD.reorder_columns(war_data)))
     assert isinstance(war_data, pd.DataFrame)
     columns = list(war_data.columns)
 
