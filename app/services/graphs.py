@@ -3,6 +3,7 @@
 from app.supabase_client import supabase
 import pandas as pd
 import numpy as np
+from app.services.process_data import replace_nan, COLUMN_TRANSLATIONS
 
 def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     """
@@ -40,6 +41,10 @@ def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     grouped_data = data.groupby([x_variable] + ["name"])[y_variables].mean().reset_index()
     grouped_data = grouped_data.sort_values(by=[x_variable, "name"])
 
+    y_labels = {var: grouped_data[var].tolist() for var in y_variables} 
+    # Nan handling: replace NaN with None for JSON compatibility
+    grouped_data = replace_nan(grouped_data)
+
     # Prepare data for graphing
     labels = {
         "x_label": grouped_data[x_variable].tolist(),
@@ -47,13 +52,6 @@ def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     }
     
     return grouped_data, labels
-
-def replace_nan(data):
-    """Replace NaN values in DataFrame with None for JSON compatibility."""
-    if isinstance(data, pd.DataFrame):
-        return data.replace({np.nan: None})
-    else:
-        raise TypeError(f"Input data must be a pandas DataFrame, got {type(data).__name__}")
 
 def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colours = None):
     """
@@ -144,7 +142,8 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
     
     chartjs_data = {
         "labels": x_labels,
-        "datasets": datasets
+        "datasets": datasets,
+        "yLabel": COLUMN_TRANSLATIONS.get(y_variable, y_variable)  # Translate y_variable for axis label
     }
     return chartjs_data
             
@@ -163,6 +162,5 @@ if __name__ == "__main__":
     chartjs_data = prepare_chartjs_data(trial_data, "attack_stars")
     print(chartjs_data)
 
-    data = chartjs_data["datasets"]
-    data_df = pd.DataFrame(data)
-    print(data_df)
+    print("\nLabels:")
+    print(prepare_chartjs_data(graph_data, y_variable=y_vars[0], x_variable="season")["labels"])

@@ -581,11 +581,15 @@ class FilterManager {
             });
         });
 
-        // Setup clicks on checkboxes' parent divs
+        // Setup clicks on checkboxes' parent divs (fallback for clicking other areas)
         document.querySelectorAll(`[data-filter-type="${filterType}"] .multi-select-option`).forEach(option => {
             option.addEventListener('click', (e) => {
-                if (e.target.type === 'checkbox' || e.target.type === 'radio') return;
+                // Skip if clicking the label or input (they have native behavior)
+                if (e.target.tagName === 'LABEL' || e.target.type === 'checkbox' || e.target.type === 'radio') {
+                    return;
+                }
 
+                // Only toggle checkbox if clicking other areas of the option div
                 const checkbox = option.querySelector('input[type="checkbox"], input[type="radio"]');
                 if (checkbox) {
                     checkbox.checked = !checkbox.checked;
