@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // stat filter expected at appliedFilters.stat (array of values) - only first value used
         const statArr = appliedFilters.stat || appliedFilters.statistic || appliedFilters['stat'] || [];
         const statValue = (statArr && statArr.length > 0) ? statArr[0] : 'attack_stars';
+        console.log('📊 Building query params with stat:', statValue, 'from filters:', appliedFilters);
         params.append('stat', statValue);
         return params;
     }

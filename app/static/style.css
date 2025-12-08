@@ -84,7 +84,8 @@ body {
     box-sizing: border-box;
 }
 
-.graph-container {
+.graph-container,
+#chart-container {
     position: relative;
     width: 90vw;
     max-width: 90%;
@@ -92,12 +93,15 @@ body {
     padding: 40px;
     background: rgba(254, 253, 255, 0.9);
     border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 16px rgba(180, 180, 200, 0.15);
+    border: 1px solid #ece9fc;
 }
-.pastel-red-title {
-    color: #b71c1c; /* Deep red */
-    background: #fff5f5; /* Pastel red background */
-    border: 2px solid #b71c1c; /* Red border */
+/* --- Refresh Button --- */
+.pastel-red-title,
+.refresh-btn {
+    color: #b71c1c;
+    background: #fff5f5;
+    border: 2px solid #b71c1c;
     border-radius: 8px;
     font-size: 1.35em;
     font-weight: 600;
@@ -105,21 +109,21 @@ body {
     text-align: center;
     margin: 12px 0;
     box-sizing: border-box;
-}
-.refresh-btn {
-    margin-left: auto; /* Pushes the button to the far right */
-}
-.pastel-red-title:hover {
-    background: #ffebeb;      /* Slightly lighter pastel red */
-    color: #d32f2f;           /* More vivid red */
-    border-color: #d32f2f;
-    box-shadow: 0 2px 12px rgba(183, 28, 28, 0.18);
-    transform: scale(1.05);   /* Slightly enlarge on hover */
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-/* Refresh icon styling */
-.refresh-icon {
-    font-size: 1.5em; /* Bigger icon size */
+.refresh-btn {
+    margin-left: auto;
+}
+
+.pastel-red-title:hover,
+.refresh-btn:hover {
+    background: #ffebeb;
+    color: #d32f2f;
+    border-color: #d32f2f;
+    box-shadow: 0 2px 12px rgba(183, 28, 28, 0.18);
+    transform: scale(1.05);
 }
 
 /* --- Table styling --- */
@@ -235,7 +239,7 @@ section h2 {
 /* Trigger Button */
 #filters .multi-select-trigger {
     width: 100%;
-    padding: 6px 12px;
+    padding: 10px 15px;
     background: #f5f7ff;
     border: 1px solid #d1d9ff;
     border-radius: 16px;
@@ -272,7 +276,7 @@ section h2 {
     position: absolute;
     top: calc(100% + 5px);
     left: 0;
-    width: 120%;
+    width: 100%;
     max-height: 250px;
     overflow-y: auto;
     background: white;
@@ -285,14 +289,13 @@ section h2 {
 
 .multi-select-panel.show {
     display: block;
-    width:100%;
 }
 
 /* Checkbox Options */
 .multi-select-option {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: background 0.15s;
     user-select: none;
@@ -302,7 +305,8 @@ section h2 {
     background: #f5f7ff;
 }
 
-.multi-select-option input[type="checkbox"] {
+.multi-select-option input[type="checkbox"],
+.multi-select-option input[type="radio"] {
     margin-right: 10px;
     cursor: pointer;
     width: 16px;
@@ -329,6 +333,12 @@ section h2 {
 
 .select-all-option:hover {
     background: #afb8e2;
+}
+
+.multi-select-divider {
+    margin: 0;
+    border: none;
+    border-top: 1px solid #e5e7f6;
 }
 
 /* Scrollbar Styling */
@@ -395,7 +405,7 @@ section h2 {
     }
 }
 
-/* Make the sortable headers look like buttons */
+/* === SORTABLE TABLE HEADERS === */
 .sortable-button {
     background: none;
     border: none;
@@ -410,22 +420,50 @@ section h2 {
 }
 
 .sortable-button:hover {
-    color: #8586d3; /* Change to your desired hover color */
-    text-decoration: underline; /* Underline on hover for clarity */    
+    color: #8586d3;
+    text-decoration: underline;
 }
 
 .sort-icon {
     font-size: 1.3em;
     color: gray;
-    transition: transform 0.2s ease; /* Smooth flipping effect */
-    text-decoration: none; /* Remove underline from arrow */
+    transition: transform 0.2s ease;
+    text-decoration: none;
 }
 
 .sortable-button:hover .sort-icon {
     transition: transform 0.3s ease;
-    color:#383acd;
+    color: #383acd;
     transform: rotate(180deg);
     text-decoration: none;
+}
+
+/* Sortable header active state */
+th.sortable {
+    background: #e3e1fc;
+    transition: all 0.2s ease;
+}
+
+th.sortable.active {
+    background: #6d6ed6;
+}
+
+th.sortable .sortable-button {
+    color: #6d6ed6;
+    transition: color 0.2s ease;
+}
+
+th.sortable.active .sortable-button {
+    color: #f5f7ff;
+}
+
+th.sortable .sort-icon {
+    color: #6d6ed6;
+    transition: color 0.2s ease;
+}
+
+th.sortable.active .sort-icon {
+    color: #f5f7ff;
 }
 
 /* === FILTERS AND GRAPH LAYOUT === */
@@ -436,9 +474,10 @@ section h2 {
     max-width: 1400px;
     padding: 0 20px;
 }
+
 /* === FILTERS PANEL === */
 .filters-panel {
-    flex: 0 0 280px; /* Fixed width sidebar */
+    flex: 0 0 280px;
     background: rgba(254, 253, 255, 0.95);
     border-radius: 16px;
     padding: 24px;
@@ -446,7 +485,7 @@ section h2 {
     border: 1px solid #ece9fc;
     height: fit-content;
     position: sticky;
-    top: 20px; /* Stays visible when scrolling */
+    top: 20px;
 }
 
 .filters-panel h2 {
@@ -456,6 +495,7 @@ section h2 {
     padding-bottom: 12px;
     border-bottom: 2px solid #e3e1fc;
 }
+
 .filter-section {
     display: flex;
     align-items: center;
@@ -471,6 +511,7 @@ section h2 {
     font-size: 0.95em;
     white-space: nowrap;
 }
+
 .button-group {
     display: flex;
     gap: 10px;
@@ -478,147 +519,6 @@ section h2 {
     flex-wrap: wrap;
     width: 100%;
 }
-/* === MULTI-SELECT DROPDOWN === */
-.multi-select-dropdown {
-    flex: 1;
-    min-width: 150px;
-    max-width: 200px;
-    position: relative;
-    color:#6d6ed6;
-}
-
-/* Trigger Button */
-#filters .multi-select-trigger {
-    width: 100%;
-    padding: 10px 15px;
-    background: #f5f7ff;  /* Match the stats dropdown background */
-    border: 1px solid #d1d9ff;  /* Match the stats dropdown border */
-    border-radius: 16px;  /* Match the stats dropdown border radius */
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-    font-weight: 500;
-    color: #6d6ed6;
-    transition: all 0.3s ease;
-}
-
-#filters .multi-select-trigger:hover {
-    background: #afb8e2;  /* Slightly darker on hover */
-    border-color: #a0ace5;
-    color: #383acd;
-}
-.dropdown-arrow {
-    margin-left: 1.2px;
-    transition: transform 0.3s ease;
-    color: #6d6ed6;
-    font-weight: bold;  /* Change from bold */
-    font-size: 3em;  /* Smaller arrow */
-}
-
-.multi-select-trigger.active .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-/* Dropdown Panel */
-.multi-select-panel {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    width: 100%;
-    max-height: 250px;
-    overflow-y: auto;
-    background: white;
-    border: 1px solid #d1d9ff;  /* Match the lighter border */
-    border-radius: 8px;  /* Slightly rounder */
-    box-shadow: 0 4px 12px rgba(109, 110, 214, 0.15);  /* Softer shadow */
-    color: #6d6ed6;
-    z-index: 1000;
-    display: none;
-}
-
-.multi-select-panel.show {
-    display: block !important;  /* !important to override any conflicts */
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.multi-select-panel.active {
-    display: block;
-}
-
-/* Checkbox Options */
-.multi-select-option {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: background 0.15s;
-    user-select: none;
-}
-
-.multi-select-option:hover {
-    background: #f5f7ff;
-}
-.multi-select-option input[type="checkbox"] {
-    margin-right: 10px;
-    cursor: pointer;
-    width: 16px;
-    height: 16px;
-    color: #6d6ed6;
-}
-
-.multi-select-option span {
-    color: #302c53;
-    font-size: 0.9em;
-}
-
-/* Select All Option */
-.select-all-option {
-    font-weight: 600;
-    background: #f9f9ff;
-}
-
-.select-all-option span {
-    color: #6d6ed6;
-}
-
-.select-all-option:hover {
-    background: #afb8e2;  /* Slightly darker on hover */
-    border-color: #a0ace5;
-    color: #383acd;
-}
-
-.multi-select-divider {
-    margin: 0;
-    border: none;
-    border-top: 1px solid #e5e7f6;
-}
-
-/* Scrollbar Styling */
-.multi-select-panel::-webkit-scrollbar {
-    width: 6px;
-}
-
-.multi-select-panel::-webkit-scrollbar-track {
-    background: #f5f7ff;
-}
-
-.multi-select-panel::-webkit-scrollbar-thumb {
-    background: #d1d9ff;
-    border-radius: 3px;
-}
-
 /* === REGULAR SELECT === */
 .filter-select {
     flex: 1;
@@ -640,13 +540,12 @@ section h2 {
     min-width: 130px;
     max-width: 150px;
     padding: 8px 20px;
-    border: none;
+    border: 2px solid #d1d9ff;
     border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
     white-space: nowrap;
     transition: all 0.2s;
-    border: 2px solid #d1d9ff;
     background: white;
     color: #6d6ed6;
 }
@@ -666,46 +565,6 @@ section h2 {
     background: #6d6ed6;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(109, 110, 214, 0.3);
-}
-
-/* === GRAPH CONTAINER === */
-.chart-container {
-    flex: 1;
-    background: rgba(254, 253, 255, 0.792);
-    border-radius: 16px;
-    margin: 20px auto;
-    padding: 30px;
-    box-shadow: 0 4px 16px rgba(180, 180, 200, 0.15);
-    border: 1px solid #ece9fc;
-}
-
-/* Sortable header active state */
-th.sortable.active {
-    background: #6d6ed6;
-}
-
-th.sortable.active .sortable-button {
-    color: #f5f7ff;
-}
-
-th.sortable.active .sort-icon {
-    color: #f5f7ff;
-}
-
-/* Inactive headers stay normal */
-th.sortable {
-    background: #e3e1fc;
-    transition: all 0.2s ease;
-}
-
-th.sortable .sortable-button {
-    color: #6d6ed6;
-    transition: color 0.2s ease;
-}
-
-th.sortable .sort-icon {
-    color: #6d6ed6;
-    transition: color 0.2s ease;
 }
 
 /* === RESPONSIVE === */
@@ -736,4 +595,5 @@ th.sortable .sort-icon {
     .graph-container canvas {
         max-width: 100%;
     }
+}
 }
