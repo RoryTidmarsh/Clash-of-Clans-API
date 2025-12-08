@@ -48,6 +48,13 @@ def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     
     return grouped_data, labels
 
+def replace_nan(data):
+    """Replace NaN values in DataFrame with None for JSON compatibility."""
+    if isinstance(data, pd.DataFrame):
+        return data.replace({np.nan: None})
+    else:
+        raise TypeError(f"Input data must be a pandas DataFrame, got {type(data).__name__}")
+
 def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colours = None):
     """
     Prepares data in a format suitable for Chart.js.
@@ -94,7 +101,7 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
     datasets = []
     for i, player in enumerate(player_names):
         # Fileter data for current player
-        player_data = grouped_data[grouped_data["name"]==player]
+        player_data = replace_nan(grouped_data[grouped_data["name"]==player])
 
         # access data into dictionary form
         season_value_map = dict(zip(player_data["season"], player_data[y_variable]))        # in form {"seaon": y_value,...}
@@ -155,3 +162,7 @@ if __name__ == "__main__":
     # print(trial_data)
     chartjs_data = prepare_chartjs_data(trial_data, "attack_stars")
     print(chartjs_data)
+
+    data = chartjs_data["datasets"]
+    data_df = pd.DataFrame(data)
+    print(data_df)

@@ -1,296 +1,217 @@
 // ========================================
 // CLASH OF CLANS - GRAPHS.JS
-// Handles interactive filtering and chart updates
+// Integrates with components.js FilterManager and renders Chart.js
+// Adds a loading spinner overlay during network requests
 // ========================================
 
-// Global variables
-let lineChart = null; // Will store Chart.js instance
+let lineChart = null; // Chart.js instance
+const canvasId = 'progress-graph'; // matches graphs.html
 
-// Function to initialize the line chart
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Graphs.js loaded!');
-    
-    // ============================================
-    // 1. MULTI-SELECT DROPDOWN FUNCTIONALITY
-    // ============================================
-    const playerTrigger = document.getElementById('player-trigger');
-    const playerPanel = document.getElementById('player-panel');
-    const selectAllCheckbox = document.getElementById('select-all-players');
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox');
-    
-    console.log('🔍 Found elements:');
-    console.log('  - Trigger button:', playerTrigger);
-    console.log('  - Panel:', playerPanel);
-    console.log('  - Checkboxes:', playerCheckboxes.length);
-    
-    // Toggle dropdown when clicking the button
-    if (playerTrigger) {
-        playerTrigger.addEventListener('click', function(e) {
-            e.stopPropagation();
-            playerPanel.classList.toggle('show');
-            console.log('🔽 Dropdown toggled, show:', playerPanel.classList.contains('show'));
-        });
-    }
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (playerPanel && !playerPanel.contains(e.target) && e.target !== playerTrigger) {
-            playerPanel.classList.remove('show');
+
+    // Spinner state (handles concurrent requests)
+    let spinnerCount = 0;
+    let spinnerElement = null;
+
+    // Ensure spinner exists and styles are injected
+    function ensureSpinner() {
+        if (spinnerElement) return spinnerElement;
+
+        const container = document.getElementById('chart-container') || document.getElementById('graph-section') || document.body;
+
+        // inject styles once
+        if (!document.getElementById('graphs-spinner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'graphs-spinner-styles';
+            style.textContent = `
+                .spinner-overlay {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,255,255,0.6);
+                    z-index: 1000;
+                    transition: opacity 0.15s ease;
+                }
+                .spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 6px solid rgba(0,0,0,0.08);
+                    border-top-color: #3498db;
+                    border-radius: 50%;
+                    animation: gos_spin 1s linear infinite;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+                }
+                @keyframes gos_spin { to { transform: rotate(360deg); } }
+                .graphs-visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+            `;
+            document.head.appendChild(style);
         }
-    });
-    
-    // "Select All" checkbox functionality
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            const isChecked = this.checked;
-            playerCheckboxes.forEach(cb => {
-                cb.checked = isChecked;
-            });
-            updateFilterDisplay();
-            console.log(isChecked ? '✅ All players selected' : '❌ All players deselected');
-        });
-    }
-    
-    // Update display when individual checkboxes change
-    playerCheckboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            updateFilterDisplay();
-            
-            // Update "Select All" checkbox state
-            const allChecked = Array.from(playerCheckboxes).every(c => c.checked);
-            const noneChecked = Array.from(playerCheckboxes).every(c => !c.checked);
-            
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = allChecked;
-                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
-            }
-        });
-    });
-        // Function to update the button text showing selection
-    function updateFilterDisplay() {
-        const selected = Array.from(playerCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-        
-        const filterSelect = document.getElementById('filter-select');
-        if (!filterSelect) return;
-        
-        if (selected.length === 0) {
-            filterSelect.textContent = 'Select players';
-        } else if (selected.length === playerCheckboxes.length) {
-            filterSelect.textContent = 'All players';
-        } else if (selected.length === 1) {
-            filterSelect.textContent = selected[0];
-        } else {
-            filterSelect.textContent = `${selected.length} players selected`;
-        }
-        
-        console.log('📝 Selection updated:', selected);
+
+        // ensure container is positioned so absolute overlay aligns
+        const cs = window.getComputedStyle(container);
+        if (cs.position === 'static') container.style.position = 'relative';
+
+        spinnerElement = document.createElement('div');
+        spinnerElement.className = 'spinner-overlay';
+        spinnerElement.style.display = 'none';
+        spinnerElement.innerHTML = `
+            <div class="spinner" role="status" aria-live="polite" aria-label="Loading chart"></div>
+            <span class="graphs-visually-hidden">Loading chart data</span>
+        `;
+        container.appendChild(spinnerElement);
+
+        return spinnerElement;
     }
 
-    // ============================================
-    // CHART FUNCTIONALLITY
-    // ============================================
-    if (!chartData) {
-        console.error('No chart data found!');
-        return; // Exit early
-    } else {
-        console.log('Chart data found:', chartData);
-    };
-    function getYAxisLabel(statValue){
-            const statDropdown = document.getElementById('stat-filter');
-            const selectedOption = statDropdown.querySelector(`option[value="${statValue}"]`);
-            return selectedOption ? selectedOption.textContent : statValue;
-        }
-    
-    // Shared chart configuration function
-    function getChartConfig(chartData, yAxisLabel = null) {
-        return {
-            type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: chartData.datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true, // Keep consistent aspect ratio
-                aspectRatio: 2, // Width:height ratio (2:1 = landscape)
-                scales: {
-                    xAxes: [{
-                        scaleLabel: {
-                            display: true,
-                            labelString: 'Season'
-                        }
-                    }],
-                    yAxes: [{
-                        scaleLabel: {
-                            display: true,
-                            labelString: yAxisLabel || window.yLabel || "Attack Stars"
-                        },
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
-                },
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 15,
-                        fontSize: 13
-                    }
-                },
-                layout: {
-                    padding: {
-                        left: 10,
-                        right: 10,
-                        top: 10,
-                        bottom: 10
-                    }
-                }
-            }
-        };
+    function showSpinner() {
+        const el = ensureSpinner();
+        spinnerCount++;
+        el.style.display = 'flex';
+        el.style.opacity = '1';
     }
-    function updateChart(selectedPlayers, selectedStat) {
-        console.log('🔄 Updating chart with:', { selectedPlayers, selectedStat });
-        
-        // Build query parameters
+
+    function hideSpinner(force = false) {
+        const el = ensureSpinner();
+        if (force) spinnerCount = 0;
+        else spinnerCount = Math.max(0, spinnerCount - 1);
+        if (spinnerCount === 0) {
+            el.style.opacity = '0';
+            // small delay to allow fade then hide
+            setTimeout(() => { if (spinnerCount === 0) el.style.display = 'none'; }, 160);
+        }
+    }
+
+    // Helper - convert appliedFilters to query params
+    function buildQueryParamsFromFilters(appliedFilters) {
         const params = new URLSearchParams();
-        selectedPlayers.forEach(player => params.append('selected_players', player));
-        params.append('stat', selectedStat);
-        
-        // Show loading state (optional but nice UX)
-        const graphSection = document.getElementById('graph-section');
-        graphSection.style.opacity = '0.5';
-        
-        // Fetch new data from API
-        fetch(`/api/graph-data?${params.toString()}`)
+        // players filter expected at appliedFilters.players (array)
+        const players = appliedFilters.players || appliedFilters.player || [];
+        players.forEach(p => params.append('selected_players', p));
+        // stat filter expected at appliedFilters.stat (array of values) - only first value used
+        const statArr = appliedFilters.stat || appliedFilters.statistic || appliedFilters['stat'] || [];
+        const statValue = (statArr && statArr.length > 0) ? statArr[0] : 'attack_stars';
+        params.append('stat', statValue);
+        return params;
+    }
+
+    // Fetch data from API and render chart
+    function fetchAndRender(params) {
+        const url = `/api/graph-data?${params.toString()}`;
+        console.log('🔄 Fetching chart data from', url);
+
+        const graphSection = document.getElementById('chart-container') || document.getElementById('graph-section') || document.body;
+        // show spinner and dim container
+        showSpinner();
+        if (graphSection) graphSection.style.opacity = '0.5';
+
+        return fetch(url)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`API returned ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`API returned ${response.status}`);
                 return response.json();
             })
-            .then(newChartData => {
-                console.log('✅ Received new chart data:', newChartData);
-                
-                // Destroy old chart if it exists
-                if (lineChart) {
-                    lineChart.destroy();
+            .then(chartData => {
+                if (!chartData || !chartData.labels) {
+                    throw new Error('Malformed chart data from API');
                 }
-                
-                // Get the Y-axis label for the selected stat
-                const yAxisLabel = getYAxisLabel(selectedStat);
-                
-                // Create new chart with updated data using shared configuration
-                const ctx = document.getElementById('lineChart').getContext('2d');
-                lineChart = new Chart(ctx, getChartConfig(newChartData, yAxisLabel));
-                
-                // Remove loading state
-                graphSection.style.opacity = '1';
-                console.log('✅ Chart updated successfully');
+                console.log('✅ Chart data received:', chartData);
+
+                // Clean up old chart
+                if (lineChart) lineChart.destroy();
+
+                // Build Chart.js configuration (v3+ syntax)
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: chartData.datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 2,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Season'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: window.yLabel || chartData.yLabel || 'Value'
+                                },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { usePointStyle: true, padding: 12 }
+                            },
+                            title: { display: false }
+                        },
+                        layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } }
+                    }
+                };
+
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) {
+                    throw new Error(`Canvas element with id "${canvasId}" not found`);
+                }
+                const ctx = canvas.getContext('2d');
+                lineChart = new Chart(ctx, config);
+
+                return chartData;
             })
-            .catch(error => {
-                console.error('❌ Error updating chart:', error);
-                alert('Failed to update chart. Please try again.');
-                graphSection.style.opacity = '1';
+            .catch(err => {
+                console.error('❌ Error fetching/rendering chart:', err);
+                throw err;
+            })
+            .finally(() => {
+                // hide spinner and restore container opacity
+                hideSpinner();
+                if (graphSection) graphSection.style.opacity = '1';
             });
     }
 
-    function initialiseLineChart(chartData) {
-        const ctx = document.getElementById('lineChart').getContext('2d');
+    // Initialize: ask API for initial data using default stat attack_stars.
+    (function init() {
+        // Use default stat 'attack_stars' for initial load
+        const params = new URLSearchParams();
+        params.append('stat', 'attack_stars');
+        fetchAndRender(params).catch(() => {}); // errors already logged
+    })();
 
-        // Log what we received
-        console.log('📊 Chart data received:');
-        console.log('  Labels:', chartData.labels);
-        console.log('  Datasets:', chartData.datasets.length, 'players');
+    // Integrate with FilterManager: when the user clicks "Apply", FilterManager triggers onApply callbacks
+    function attachFilterManagerListener() {
+        if (!window.filterManager) {
+            console.log('🔁 Waiting for FilterManager...');
+            setTimeout(attachFilterManagerListener, 100);
+            return;
+        }
 
-        // Create chart using shared configuration
-        lineChart = new Chart(ctx, getChartConfig(chartData));
-    };
+        console.log('🔗 Attaching graph listener to FilterManager');
 
-    // ============================================
-    // APPLY BUTTON FUNCTIONALITY
-    // ============================================
-    const applyButton = document.getElementById('apply-filters');
-    if (applyButton) {
-        applyButton.addEventListener('click', function() {
-            console.log('🎯 Apply button clicked');
-            
-            // Get selected players
-            const selectedPlayers = Array.from(playerCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-            
-            // Validate at least one player is selected
-            if (selectedPlayers.length === 0) {
-                alert('Please select at least one player');
-                return;
-            }
-            
-            // Get selected statistic
-            const statDropdown = document.getElementById('stat-filter');
-            const selectedStat = statDropdown.value;
-            
-            console.log('📊 Filters applied:', { selectedPlayers, selectedStat });
-            
-            // Update the chart
-            updateChart(selectedPlayers, selectedStat);
+        // When Apply is clicked, FilterManager will call its apply callbacks with the appliedFilters
+        window.filterManager.onApply((appliedFilters) => {
+            console.log('🎯 Graphs received applied filters:', appliedFilters || {});
+            const params = buildQueryParamsFromFilters(appliedFilters || {});
+            fetchAndRender(params).catch(() => {});
         });
+
+        // Also respond to existing applied filters on load (if any)
+        const current = window.filterManager.getAppliedFilters();
+        if (current && Object.keys(current).length > 0) {
+            console.log('📥 Applying existing filters on load:', current);
+            const params = buildQueryParamsFromFilters(current);
+            fetchAndRender(params).catch(() => {});
+        }
     }
 
-    // ============================================
-    // RESET BUTTON FUNCTIONALITY
-    // ============================================
-    const resetButton = document.getElementById('reset-filters');
-    if (resetButton) {
-        resetButton.addEventListener('click', function() {
-            console.log('🔄 Reset button clicked');
-            
-            // 1. Check all player checkboxes
-            playerCheckboxes.forEach(cb => {
-                cb.checked = true;
-            });
-            
-            // 2. Update "Select All" checkbox
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            }
-            
-            // 3. Update filter display text
-            updateFilterDisplay();
-            
-            // 4. Reset statistic dropdown to first option (Attack Stars)
-            const statDropdown = document.getElementById('stat-filter');
-            statDropdown.selectedIndex = 0;
-            
-            // 5. Get all players for the reset
-            const allPlayers = Array.from(playerCheckboxes).map(cb => cb.value);
-            
-            // 6. Update chart with default settings
-            updateChart(allPlayers, statDropdown.value);
-            
-            console.log('✅ Filters reset to defaults');
-        });
-    }
-
-
-    // ============================================
-    // INITIALIZATION
-    // ============================================
-    // GRAPH INITIALIZATION
-    if (window.chartData) {
-        console.log('✅ Initializing chart with data from window object');
-        initialiseLineChart(window.chartData);
-    } else {
-        console.error('❌ No chart data found on window object');
-    
-    }
-    // FILTER DISPLAY INITIALIZATION
-    if (playerCheckboxes.length > 0) {
-        updateFilterDisplay();
-        console.log('✅ Initial filter display updated');
-    }
+    attachFilterManagerListener();
 });

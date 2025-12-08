@@ -669,7 +669,7 @@ section h2 {
 }
 
 /* === GRAPH CONTAINER === */
-.graph-container {
+.chart-container {
     flex: 1;
     background: rgba(254, 253, 255, 0.792);
     border-radius: 16px;

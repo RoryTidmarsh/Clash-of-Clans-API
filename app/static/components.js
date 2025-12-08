@@ -94,9 +94,31 @@ class FilterDropdown extends HTMLElement {
         const filterLabel = this.getAttribute('filter-label') || 'Items';
         const optionsAttr = this.getAttribute('options');
         
-        const options = optionsAttr ? JSON.parse(optionsAttr) : []; // Parse options JSON or use empty array
+        let options = [];
+        try {
+            options = optionsAttr ? JSON.parse(optionsAttr) : [];
+        } catch (e) {
+            // Fallback if optionsAttr was passed as a simple CSV-like string
+            options = optionsAttr ? optionsAttr.split(',').map(s => s.trim()) : [];
+        }
 
-        // Build dropdown HTML
+        // Normalize options: allow either string or {value,label}
+        const optionItems = options.map(opt => {
+            if (typeof opt === 'object' && opt !== null) {
+                return { value: String(opt.value), label: String(opt.label) };
+            } else {
+                return { value: String(opt), label: String(opt) };
+            }
+        });
+
+        const isSingleSelect = (filterType === 'stat'); // special-case stat to single-select (radio)
+        const selectAllHTML = isSingleSelect ? '' : `
+            <div class="multi-select-option select-all-option">
+                <input type="checkbox" id="select-all-${filterType}">
+                <span>Select All</span>
+            </div>`;
+
+        // Build dropdown HTML. For 'stat' we render radio inputs (single-select) but keep the class `${filterType}-checkbox`
         this.innerHTML = `
             <label> Select ${filterLabel}:</label>
             <div class="multi-select-dropdown" data-filter-type="${filterType}"> 
@@ -105,14 +127,11 @@ class FilterDropdown extends HTMLElement {
                     <div class="arrow">&#9660;</div>
                 </div>
                 <div class="multi-select-panel" id="${filterType}-panel">
-                    <div class="multi-select-option select-all-option">
-                        <input type="checkbox" id="select-all-${filterType}">
-                        <span>Select All</span>
-                    </div>
-                    ${options.map(option => `
+                    ${selectAllHTML}
+                    ${optionItems.map(option => `
                         <div class="multi-select-option">
-                            <input type="checkbox" class="${filterType}-checkbox" value="${option}">
-                            <span>${option}</span>
+                            <input type="${isSingleSelect ? 'radio' : 'checkbox'}" name="${filterType}-input" class="${filterType}-checkbox" value="${option.value}" id="${filterType}-${option.value}">
+                            <label for="${filterType}-${option.value}">${option.label}</label>
                         </div>
                     `).join('')}
                 </div>
@@ -123,21 +142,40 @@ class FilterDropdown extends HTMLElement {
         setTimeout(() => {
             if (window.filterManager) {
                 window.filterManager.setupFilter(filterType);
-                
-                // Add listeners to update count when checkboxes change
-                const checkboxes = this.querySelectorAll(`.${filterType}-checkbox`);
-                const countSpan = document.getElementById(`${filterType}-count`);
-                
-                checkboxes.forEach(checkbox => {
-                    checkbox.addEventListener('change', () => {
-                        const checkedCount = this.querySelectorAll(`.${filterType}-checkbox:checked`).length;
-                        if (checkedCount > 0) {
-                            countSpan.textContent = `${checkedCount} selected`;
-                        } else {
-                            countSpan.textContent = `Select ${filterLabel}`;
+
+                // If single-select (stat), default to 'attack_stars' if present
+                if (isSingleSelect) {
+                    const defaultValue = 'attack_stars';
+                    const defaultInput = this.querySelector(`.${filterType}-checkbox[value="${defaultValue}"]`);
+                    if (defaultInput) {
+                        defaultInput.checked = true;
+                        // Update filter state inside FilterManager so the default appears without clicking Apply
+                        if (window.filterManager && typeof window.filterManager.updateFilter === 'function') {
+                            window.filterManager.updateFilter(filterType);
+                            // Also pre-fill appliedFilters so graphs.js can see a starting value if it queries getAppliedFilters before Apply
+                            window.filterManager.appliedFilters[filterType] = [defaultValue];
                         }
+                        // Update visible trigger text to the label of the default
+                        const countSpan = document.getElementById(`${filterType}-count`);
+                        const optionLabel = this.querySelector(`label[for="${filterType}-${defaultValue}"]`);
+                        if (countSpan && optionLabel) countSpan.textContent = optionLabel.textContent;
+                    }
+                } else {
+                    // Add listeners to update count when checkboxes change
+                    const checkboxes = this.querySelectorAll(`.${filterType}-checkbox`);
+                    const countSpan = document.getElementById(`${filterType}-count`);
+                    
+                    checkboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => {
+                            const checkedCount = this.querySelectorAll(`.${filterType}-checkbox:checked`).length;
+                            if (checkedCount > 0) {
+                                countSpan.textContent = `${checkedCount} selected`;
+                            } else {
+                                countSpan.textContent = `Select ${filterLabel}`;
+                            }
+                        });
                     });
-                });
+                }
             }
         }, 0);   
     }
@@ -535,7 +573,7 @@ class FilterManager {
             });
         }
 
-        // Setup individual checkbox changes
+        // Setup individual checkbox changes (works for both checkboxes and radio inputs)
         document.querySelectorAll(`.${filterType}-checkbox`).forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 this.updateFilter(filterType);
@@ -546,9 +584,9 @@ class FilterManager {
         // Setup clicks on checkboxes' parent divs
         document.querySelectorAll(`[data-filter-type="${filterType}"] .multi-select-option`).forEach(option => {
             option.addEventListener('click', (e) => {
-                if (e.target.type === 'checkbox') return;
+                if (e.target.type === 'checkbox' || e.target.type === 'radio') return;
 
-                const checkbox = option.querySelector('input[type="checkbox"]');
+                const checkbox = option.querySelector('input[type="checkbox"], input[type="radio"]');
                 if (checkbox) {
                     checkbox.checked = !checkbox.checked;
                     checkbox.dispatchEvent(new Event('change'));
@@ -605,7 +643,7 @@ class FilterManager {
     }
 
     updateFilter(filterType) {
-        // Update filter values based on checked checkboxes
+        // Update filter values based on checked inputs (works for checkboxes and radio inputs)
         this.filters[filterType] = Array.from(document.querySelectorAll(`.${filterType}-checkbox:checked`))
             .map(checkbox => checkbox.value);
 
