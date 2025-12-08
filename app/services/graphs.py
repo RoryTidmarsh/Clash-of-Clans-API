@@ -3,6 +3,7 @@
 from app.supabase_client import supabase
 import pandas as pd
 import numpy as np
+from app.services.process_data import replace_nan, COLUMN_TRANSLATIONS
 
 def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     """
@@ -39,6 +40,10 @@ def fetch_graph_data(y_variables, x_variable="season", player_filter=None):
     # Data for each player grouped by the x_variable
     grouped_data = data.groupby([x_variable] + ["name"])[y_variables].mean().reset_index()
     grouped_data = grouped_data.sort_values(by=[x_variable, "name"])
+
+    y_labels = {var: grouped_data[var].tolist() for var in y_variables} 
+    # Nan handling: replace NaN with None for JSON compatibility
+    grouped_data = replace_nan(grouped_data)
 
     # Prepare data for graphing
     labels = {
@@ -94,7 +99,7 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
     datasets = []
     for i, player in enumerate(player_names):
         # Fileter data for current player
-        player_data = grouped_data[grouped_data["name"]==player]
+        player_data = replace_nan(grouped_data[grouped_data["name"]==player])
 
         # access data into dictionary form
         season_value_map = dict(zip(player_data["season"], player_data[y_variable]))        # in form {"seaon": y_value,...}
@@ -137,7 +142,8 @@ def prepare_chartjs_data(grouped_data, y_variable, x_variable = "season", colour
     
     chartjs_data = {
         "labels": x_labels,
-        "datasets": datasets
+        "datasets": datasets,
+        "yLabel": COLUMN_TRANSLATIONS.get(y_variable, y_variable)  # Translate y_variable for axis label
     }
     return chartjs_data
             
@@ -155,3 +161,6 @@ if __name__ == "__main__":
     # print(trial_data)
     chartjs_data = prepare_chartjs_data(trial_data, "attack_stars")
     print(chartjs_data)
+
+    print("\nLabels:")
+    print(prepare_chartjs_data(graph_data, y_variable=y_vars[0], x_variable="season")["labels"])

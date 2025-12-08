@@ -1,152 +1,53 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head></head>
+<body>
+    <page-layout title="Clan War League Stats - Pussay Palace" 
+        favicon="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png"
+        logo-url="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png"
+        show-refresh="true">
 
-{% block title %}Clan War League Stats - Pussay Palace{% endblock %}
+        <div class="main-data-box">
+            <section id="filters">
+                <filter-dropdown filter-type="players" filter-label="Players" options='{{ all_players | tojson }}'></filter-dropdown>
+                <filter-controls></filter-controls>
+            </section>
+        
 
-{% block content %}
-<div class="main-data-box">
-    <section id="filters">
-        {% set filter_type = 'players' %}
-        {% set filter_label = 'Players' %}
-        {% set filter_options = all_players %}
-        {% include 'filters.html' %}
+        <hr>
+        <!-- Add this temporarily to see what data you're getting -->
+        
+        {% if recent_stats|length > 0 %}
+        <filterable-table
+            table-id="recent-stats-table"
+            title="Recent Clan War League Stats"
+            columns='{{ recent_columns | tojson }}'
+            data='{{ recent_stats }}'
+            filter-column="0">
+        </filterable-table>
+        {% else %}
+        <div style="text-align: center; padding: 20px; color: #999;">
+            <a> No recent stats data available</a>
+        </div>
+        {% endif %}
 
-        <button id="apply-filters" type="button" class = "filter-button">Apply</button>
-        <button id="reset-filters" type="button" class = "filter-button">Reset</button>        
-    </section>
-    
-    <hr>
-    <section id="recent-war">
-        <h2>Most Recent War Stats (Averaged)</h2>
-        <table id="recent-stats-table">
-            <thead>
-                <tr>
-                    {% for column in recent_stats[0].keys() %}
-                        
-                    <th class="sortable">
-                        <button class="sortable-button" data-column="{{ column }}">
-                            {{ column }}
-                            <span class="sort-icon">▲</span> <!-- Placeholder for sort icon -->
-                        </button>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in recent_stats %}
-                <tr>
-                    {% for value in row.values() %}
-                    <td>{{ value }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
-    <hr>
-    <section id="all-time">
-        <h2>All Time War Stats (Averaged)</h2>
-        <table id="all-time-stats-table">
-            <thead>
-                <tr>
-                    {% for column in all_time_stats[0].keys() %}
-                    <th class="sortable">
-                        <button class="sortable-button" data-column="{{ column }}">
-                            {{ column }}
-                            <span class="sort-icon">▲</span> <!-- Placeholder for sort icon -->
-                        </button>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in all_time_stats %}
-                <tr>
-                    {% for value in row.values() %}
-                    <td>{{ value }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
-</div>
+        <hr>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Store original table data for filtering
-        const originalRecentData = Array.from(document.querySelectorAll('#recent-stats-table tbody tr'));
-        const originalAllTimeData = Array.from(document.querySelectorAll('#all-time-stats-table tbody tr'));
+        {% if all_time_stats and all_time_stats|length > 0 %}
+        <filterable-table
+            table-id="all-time-stats-table"
+            title="All Time War Stats (Averaged)"
+            columns='{{ all_time_columns | tojson }}'
+            data='{{ all_time_stats }}'
+            filter-column="0">
+        </filterable-table>
+        {% else %}
+        <div style="text-align: center; padding: 20px; color: #999;">No all-time stats data available</div>
+        {% endif %}
+        </div>
 
-        // Listen for when filters are applied
-        window.filterManager.onApply((appliedFilters) => {
-            console.log('Filters applied:', appliedFilters);
-            updateTablesWithFilters(appliedFilters);
-        });
+    </page-layout>
 
-        function updateTablesWithFilters(filters) {
-            const selectedPlayers = filters.players || [];
-            
-            // If no players selected, show all data
-            if (selectedPlayers.length === 0) {
-                showAllRows('#recent-stats-table', originalRecentData);
-                showAllRows('#all-time-stats-table', originalAllTimeData);
-                return;
-            }
-
-            // Filter tables based on selected players
-            filterTableByPlayers('#recent-stats-table', originalRecentData, selectedPlayers);
-            filterTableByPlayers('#all-time-stats-table', originalAllTimeData, selectedPlayers);
-        }
-
-        function filterTableByPlayers(tableId, originalRows, selectedPlayers) {
-            const tbody = document.querySelector(`${tableId} tbody`);
-            
-            // Clear current table
-            tbody.innerHTML = '';
-            
-            // Filter rows based on player names (assuming name is in first column)
-            const filteredRows = originalRows.filter(row => {
-                const playerName = row.cells[0].textContent.trim(); // Adjust index if name isn't first column
-                return selectedPlayers.includes(playerName);
-            });
-            
-            // Add filtered rows back to table
-            filteredRows.forEach(row => {
-                tbody.appendChild(row.cloneNode(true));
-            });
-
-            // Show message if no results
-            if (filteredRows.length === 0) {
-                const noResultsRow = document.createElement('tr');
-                const noResultsCell = document.createElement('td');
-                const columnCount = document.querySelectorAll(`${tableId} thead th`).length;
-                
-                noResultsCell.setAttribute('colspan', columnCount);
-                noResultsCell.textContent = 'No players found matching the selected filters';
-                noResultsCell.style.textAlign = 'center';
-                noResultsCell.style.fontStyle = 'italic';
-                noResultsCell.style.color = '#666';
-                
-                noResultsRow.appendChild(noResultsCell);
-                tbody.appendChild(noResultsRow);
-            }
-        }
-
-        function showAllRows(tableId, originalRows) {
-            const tbody = document.querySelector(`${tableId} tbody`);
-            tbody.innerHTML = '';
-            originalRows.forEach(row => {
-                tbody.appendChild(row.cloneNode(true));
-            });
-        }
-
-        // Table sorting functionality (keep existing code)
-        function makeTableSortable(tableId) {
-            // ... your existing sorting code
-        }
-
-        makeTableSortable("recent-stats-table");
-        makeTableSortable("all-time-stats-table");
-    });
-</script>
-{% endblock %}
+    <script src="{{ url_for('static', filename='components.js') }}"></script>
+</body>
+</html>

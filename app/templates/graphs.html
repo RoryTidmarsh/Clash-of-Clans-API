@@ -1,115 +1,26 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head></head>
+<body>
+    <page-layout title="Clan War League Stats - Pussay Palace" 
+        favicon="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png"
+        logo-url="https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png"
+        show-refresh="true">
 
-{% block title %}Progress Graphs{% endblock %}
-
-{% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
-<div class="main-data-box">
-    <section id="filters">
-        <label for="player">Players:</label>
-        <div class="multi-select-dropdown" style="display: inline-block; min-width: 200px;">
-            <button type="button" class="multi-select-trigger" id="player-trigger">
-                <span id="filter-select">Select players</span>
-                <span class="dropdown-arrow">▼</span>
-            </button> 
-            <div class="multi-select-panel" id="player-panel">
-                <div>
-                    <label class="multi-select-option select-all-option">
-                        <input type="checkbox" id="select-all-players" checked>
-                        <span>Select All</span>
-                    </label>
-                    <hr class="multi-select-divider">
-                    
-                    <script>
-                        console.log("🐍 all_players from Flask:", {{ all_players | tojson }});
-                        console.log("🐍 Type of all_players:", {{all_players|length}});
-                    </script>
-                    {% if all_players %}
-                        {% for player in all_players %}
-                        <label class="multi-select-option">
-                            <input 
-                                type="checkbox" 
-                                class="player-checkbox" 
-                                value="{{ player }}"
-                                checked
-                            >
-                            <span>{{ player }}</span>
-                        </label>
-                        {% endfor %}
-
-                    {% else %}
-                        <div style="padding: 10px; color: red;">
-                            ⚠️ No players found!
-                        </div>
-                    {% endif %}
-                </div>
+        <div class="main-data-box">
+            <section id="filters">
+                <filter-dropdown filter-type="players" filter-label="Players" options='{{ all_players | tojson }}'></filter-dropdown>
+                <filter-dropdown filter-type="stat" filter-label="Y axis" options='{{ available_stats | tojson }}'></filter-dropdown>
+                <filter-controls></filter-controls>
+            </section>
+            <hr>
+            <div id="chart-container">
+                <canvas id="progress-graph"></canvas>
             </div>
         </div>
-
-        <label for="stat-filter">Statistic (Y-Axis):</label>
-        <select id="stat-filter">
-            {% for stat in available_stats %}
-            <option value="{{ stat.value }}" {% if loop.first %}selected{% endif %}>
-                {{ stat.label }}
-            </option>
-            {% endfor %}
-        </select>
-
-        <button id="apply-filters" type="button" class = "filter-button">Apply</button>
-        <button id="reset-filters" type="button" class = "filter-button">Reset</button>
-    </section>
-
-    <hr>
-
-    <!-- GRAPH CONTAINER -->
-    <section id="graph-section">
-        <h2>Performance Chart</h2>
-        
-        {% if chartjs_data %}
-        <!-- Chart will render here -->
-        <div class="graph-container" style="position: relative; margin: 20px 0;">
-            <canvas id="lineChart"></canvas>
-        </div>
-        {% else %}
-        <!-- Placeholder when no data -->
-        <div class="no-data-message" style="text-align: center; padding: 40px; background: rgba(216, 213, 213, 0.968); border-radius: 8px;">
-            <p style="font-size: 18px; color: #666;">
-                📊 No data to display
-            </p>
-            <p style="color: #888;">
-                Select players and apply filters to generate the graph
-            </p>
-        </div>
-        {% endif %}
-    </section>
-</div>
-
-<!-- load your static JS which expects chartData to exist -->
-<script src="{{ url_for('static', filename='graphs.js') }}"></script>
-<script>
-    // 🎓 Step 1: Receive data from Flask/Jinja2
-    // The '|safe' filter tells Jinja2 not to escape the JSON
-    // Without it, quotes would become &quot; and break the JavaScript
-    {% if chartjs_data %}
-        window.chartData = {{ chartjs_data | tojson}};
-        console.log("📊 Chart Data Received:", chartData);
-        console.log("📅 Labels (X-axis):", chartData.labels);
-        console.log("👥 Number of players:", chartData.datasets.length);
-    {% else %}
-        window.chartData = null;
-        console.log("⚠️ No chart data available");
-    {% endif %}
-    {% if x_label and y_label %}
-        window.xLabel = {{ x_label | tojson}};
-        window.yLabel = {{ y_label | tojson}};
-        console.log("📅 X Label", xLabel);
-        console.log("📊 Y Label", yLabel);
-    {% else %}
-        window.xLabel = null;
-        window.yLabel = null;
-        console.log("⚠️ No xLabels or yLabel available");
-    {% endif %}
-</script>
-
-
-{% endblock %}
+    </page-layout>
+    <script src="{{ url_for('static', filename='components.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='graphs.js') }}"></script>
+</body>
+</html>
