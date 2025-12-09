@@ -1,6 +1,9 @@
 # Flask web framework
 Flask==3.0.0
 
+# Production WSGI server
+gunicorn==22.0.0
+
 # Database
 supabase==2.3.0
 
