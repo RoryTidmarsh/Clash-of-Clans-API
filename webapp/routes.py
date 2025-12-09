@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, Response
+from flask import Blueprint, render_template, request, jsonify
 import webapp.services.index_data as ID
 import webapp.services.process_data as PD
 # from webapp.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
@@ -6,9 +6,6 @@ import webapp.services.full_table as full_table
 # from webapp.services.reading_WarData import WarDataManager, get_war_stats
 import webapp.services.graphs as graphs
 import pandas as pd
-import numpy as np
-import os
-from webapp.supabase_client import supabase
 
 
 bp = Blueprint('main', __name__)

@@ -2,7 +2,6 @@
 """
 from webapp.supabase_client import supabase
 import pandas as pd
-import numpy as np
 from webapp.services.process_data import replace_nan, COLUMN_TRANSLATIONS
 
 def fetch_graph_data(y_variables, x_variable="season", player_filter=None):

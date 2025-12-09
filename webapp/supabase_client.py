@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 import numpy as np
 from typing import Iterable
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env.webapp'))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
