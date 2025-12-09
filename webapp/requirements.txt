@@ -1,15 +1,15 @@
 # Flask web framework
 Flask==3.0.0
 
+# Production WSGI server
+gunicorn==22.0.0
+
 # Database
 supabase==2.3.0
 
 # Data processing
 pandas==2.1.4
 numpy==1.26.2
-
-# HTTP requests
-requests==2.31.0
 
 # Environment variables
 python-dotenv==1.0.0

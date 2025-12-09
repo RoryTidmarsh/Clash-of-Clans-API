@@ -6,55 +6,59 @@ class SiteHeader extends HTMLElement {
         // Get attributes for customisation
         const logoUrl = this.getAttribute('logo-url') || '';
         const title = this.getAttribute('title') || 'Clan War Leageue Stats'
-        const showRefresh = this.getAttribute('show-refresh') !== 'false';
+        // const showRefresh = this.getAttribute('show-refresh') !== 'false';
 
         this.innerHTML = `
             <div class="site-header">
                 <img src="${logoUrl}" alt="Clan Logo" class="site-logo">
                 <span class="site-title">${title}</span>
-                ${showRefresh ? `
-                    <button id="refresh-btn" class="refresh-btn pastel-red-title">
-                        &#x21bb; Refresh Data
-                    </button>`
-                : ''}
+                
             </div> 
             `;
-        
-        // Event listener for refresh button if it exists
-        if (showRefresh) {
-            const refreshBtn = this.querySelector('#refresh-btn');   // Reference to the refresh button
-            refreshBtn.addEventListener('click', () => {   // Add click event listener
-                refreshBtn.disabled = true;   // Disable button to prevent multiple clicks
-                refreshBtn.textContent = 'Refreshing...';   // Change button text to indicate action
 
-                fetch('/refresh-data', {method: 'POST'})  // Send POST request to refresh data
-                    .then(response => response.json())
-                    .then(data => {
-                        refreshBtn.textContent = data.message || 'Refreshed!';   // Update button text on success
+        // // Commented out old refresh button- this is suppore in the ~/refresh/ directory now
+        // // The website no longer directly handles data refreshes
+        // ${showRefresh ? `
+        //             <button id="refresh-btn" class="refresh-btn pastel-red-title">
+        //                 &#x21bb; Refresh Data
+        //             </button>`
+        //         : ''}
+        
+        // // Event listener for refresh button if it exists
+        // if (showRefresh) {
+        //     const refreshBtn = this.querySelector('#refresh-btn');   // Reference to the refresh button
+        //     refreshBtn.addEventListener('click', () => {   // Add click event listener
+        //         refreshBtn.disabled = true;   // Disable button to prevent multiple clicks
+        //         refreshBtn.textContent = 'Refreshing...';   // Change button text to indicate action
+
+        //         fetch('/refresh-data', {method: 'POST'})  // Send POST request to refresh data
+        //             .then(response => response.json())
+        //             .then(data => {
+        //                 refreshBtn.textContent = data.message || 'Refreshed!';   // Update button text on success
                         
-                        // Update status box with log if available
-                        let log = data.log || [];
-                        const statusBox = document.getElementById('status-box');
-                        if (statusBox) {
-                            if (statusBox) {
-                                statusBox.textContent = log.join('\n');   // Update status box with log
-                            }
-                        }
-                        setTimeout(() => {  // Reset button after delay
-                            refreshBtn.disabled = false;   // Re-enable button after action
-                            refreshBtn.textContent = '↻ Refresh Data';   // Reset button text
-                        }, 1200);   // 1.2 seconds delay
-                    })
-                    .catch(error => { // Handle errors
-                        console.error('Error refreshing data:', error);
-                        refreshBtn.textContent = 'Error! Try Again';   // Update button text on error
-                        setTimeout(() => {  // Reset button after delay
-                            refreshBtn.disabled = false;   // Re-enable button after action
-                            refreshBtn.textContent = '↻ Refresh Data';   // Reset button text
-                        }, 2000);   // 2 seconds delay
-                    });
-            });
-        }
+        //                 // Update status box with log if available
+        //                 let log = data.log || [];
+        //                 const statusBox = document.getElementById('status-box');
+        //                 if (statusBox) {
+        //                     if (statusBox) {
+        //                         statusBox.textContent = log.join('\n');   // Update status box with log
+        //                     }
+        //                 }
+        //                 setTimeout(() => {  // Reset button after delay
+        //                     refreshBtn.disabled = false;   // Re-enable button after action
+        //                     refreshBtn.textContent = '↻ Refresh Data';   // Reset button text
+        //                 }, 1200);   // 1.2 seconds delay
+        //             })
+        //             .catch(error => { // Handle errors
+        //                 console.error('Error refreshing data:', error);
+        //                 refreshBtn.textContent = 'Error! Try Again';   // Update button text on error
+        //                 setTimeout(() => {  // Reset button after delay
+        //                     refreshBtn.disabled = false;   // Re-enable button after action
+        //                     refreshBtn.textContent = '↻ Refresh Data';   // Reset button text
+        //                 }, 2000);   // 2 seconds delay
+        //             });
+        //     });
+        // }
     }
 }
 
@@ -780,7 +784,7 @@ class PageLayout extends HTMLElement {
         const title = this.getAttribute('title') || 'Clan War League Stats';
         const favicon = this.getAttribute('favicon') || "https://api-assets.clashofclans.com/badges/512/Z4CSpLlobD7Xl40FZhCQ0BzvZUcAdLvBEBOavqiHN90.png";
         const extraCss = this.getAttribute('extra-css') || ''; // Additional CSS URL if any
-        const showRefresh = this.getAttribute('show-refresh') || 'true';
+        // const showRefresh = this.getAttribute('show-refresh') || 'true';
 
         this.setupHead(title, favicon, extraCss);
 

@@ -4,36 +4,21 @@ import requests
 import sys
 import io
 from datetime import datetime
-import os
-from app.supabase_client import supabase, update_war_status
-
-# COC API key (loaded via supabase_client's dotenv call)
-coc_api_key = os.getenv("COC_API_KEY")
+from webapp.supabase_client import supabase
+from refresh.COC_client import clan_data, response_codes
 
 # Force UTF-8 encoding for stdout
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # Pussay Clan Tag
-clan_tag = "%23CQGY2LQU"
-clan_name = "Pussay Palace"
-base_url = "https://api.clashofclans.com/v1"
-url = base_url + f"/clans/{clan_tag}"
-headers = {
-    "Accept": "application/json",
-    "authorization": "Bearer %s" % coc_api_key
-}
+clan_tag = clan_data["clan_tag"]
+clan_name = clan_data["clan_name"]
+base_url = clan_data["base_url"]
+url = clan_data["url"]
+headers = clan_data["headers"]
+
 debug_print_statements = False
 
-# Response codes from the API
-response_codes = {
-    200: "Success",
-    400: "Client provided incorrect parameters for the request.",
-    403: "Access denied, either because of missing/incorrect credentials or used API token does not grant access to the requested resource. Check the Api Key.",
-    404: "The requested resource does not exist.",
-    429: "Too many requests. You are rate limited. Wait before sending more requests.",
-    500: "Server error. Something is wrong on Clash of Clans side.",
-    503: "Server is down for maintenance.",
-}
 WAR_DATA_SCHEMA = {
     'tag': str,
     'name': str,

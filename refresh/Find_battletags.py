@@ -1,25 +1,17 @@
 import pandas as pd
 import numpy as np
 import requests
-from dotenv import load_dotenv
 import os
-from app.supabase_client import supabase,store_battle_tag # Import supabase client to load .env variables
-# Load environment variables from .env file
-load_dotenv()
-url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_KEY")
-coc_api_key = os.getenv("COC_API_KEY")
-
+from refresh.supabaseRefresh import supabase,store_battle_tag # Import supabase client to load .env variables
+from refresh.COC_client import clan_data,response_codes
 
 # Pussay Clan Tag
-clan_tag = "%23CQGY2LQU"
-clan_name = "Pussay Palace"
-base_url = "https://api.clashofclans.com/v1"
-url = base_url + f"/clans/{clan_tag}"
-headers = {
-    "Accept": "application/json",
-    "authorization": "Bearer %s" % coc_api_key,
-}
+clan_tag = clan_data["clan_tag"]
+clan_name = clan_data["clan_name"]
+base_url = clan_data["base_url"]
+url = clan_data["url"]
+headers = clan_data["headers"]
+
 debug_print_statements = False
 # Make the request to the API
 # response = requests.request("GET", url, headers=headers)
@@ -38,17 +30,6 @@ debug_print_statements = False
 # response_warlog = requests.request("GET", url + "/warlog", headers=headers)
 # data_warlog = response_warlog.json()
 # print("War log keys: ", data_warlog["items"][0].keys()) # Keys: ['result', 'endTime', 'teamSize', 'attacksPerMember', 'battleModifier', 'clan', 'opponent']
-
-# Response codes from the API
-response_codes = {
-    200: "Success",
-    400: "Client provided incorrect parameters for the request.",
-    403: "Access denied, either because of missing/incorrect credentials or used API token does not grant access to the requested resource. Check the Api Key.",
-    404: "The requested resource does not exist.",
-    429: "Too many requests. You are rate limited. Wait before sending more requests.",
-    500: "Server error. Something is wrong on Clash of Clans side.",
-    503: "Server is down for maintenance.",
-}
 
 def get_war_tags(clan_tag, headers = headers):
     """Get the war tags for the current war league of the clan.

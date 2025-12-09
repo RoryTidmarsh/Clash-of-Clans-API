@@ -1,6 +1,8 @@
 *.ipynb
 __pycache__/*
 *.env
+.env.*
+!.env.*.example
 .vscode/*
 war_Data/*
 __pycache__

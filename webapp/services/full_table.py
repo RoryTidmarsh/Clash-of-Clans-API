@@ -1,4 +1,4 @@
-from app.supabase_client import supabase
+from webapp.supabase_client import supabase
 import pandas as pd
 
 def get_full_table_data(season_filter=None, player_filter=None):
