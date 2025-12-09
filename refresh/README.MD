@@ -1,0 +1,2 @@
+# Refresh Data folder
+This folder contains the scripts to be used in to refresh the data stored in supabase. It will interact with the Clash of Clans API to get the latest data usiong a cron job on a raspberry pi. This will have a service key to supabase in order to add data, stored in a .env file which is not included in this repository for security reasons. 

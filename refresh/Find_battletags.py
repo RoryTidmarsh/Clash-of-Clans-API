@@ -3,7 +3,7 @@ import numpy as np
 import requests
 from dotenv import load_dotenv
 import os
-from app.supabase_client import supabase,store_battle_tag # Import supabase client to load .env variables
+from webapp.supabase_client import supabase,store_battle_tag # Import supabase client to load .env variables
 # Load environment variables from .env file
 load_dotenv()
 url = os.getenv("SUPABASE_URL")

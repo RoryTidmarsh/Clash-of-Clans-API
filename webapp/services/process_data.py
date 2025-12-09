@@ -205,7 +205,7 @@ if __name__ == "__main__":
         "wartag": ["#WAR001", "#WAR001", "#WAR002", np.nan]
     })
 
-    import app.services.index_data as ID
+    import webapp.services.index_data as ID
     actual_data = ID.get_index_data() # returns dict with recent_stats, all_time_stats, filters
     # print(actual_data)
     recent_stats = actual_data["recent_stats"]

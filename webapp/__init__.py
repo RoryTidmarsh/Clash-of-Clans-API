@@ -1,12 +1,11 @@
 from flask import Flask
 
 def create_app():
-    app = Flask(__name__)
+    webapp = Flask(__name__)
 
     # Import and register your blueprint (routes)
-    from app.routes import bp as main_bp
-    app.register_blueprint(main_bp)
-
+    from webapp.routes import bp as main_bp
+    webapp.register_blueprint(main_bp)
     # You can add further app configuration here (database, extensions, etc.)
 
-    return app
+    return webapp

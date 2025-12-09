@@ -1,14 +1,14 @@
 from flask import Blueprint, render_template, request, jsonify, Response
-import app.services.index_data as ID
-import app.services.process_data as PD
-from app.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
-import app.services.full_table as full_table
-from app.services.reading_WarData import WarDataManager, get_war_stats
-import app.services.graphs as graphs
+import webapp.services.index_data as ID
+import webapp.services.process_data as PD
+# from webapp.services.Find_battletags import get_war_tags, wars_with_clan, Update_Supabase_battle_tags
+import webapp.services.full_table as full_table
+# from webapp.services.reading_WarData import WarDataManager, get_war_stats
+import webapp.services.graphs as graphs
 import pandas as pd
 import numpy as np
 import os
-from app.supabase_client import supabase
+from webapp.supabase_client import supabase
 
 
 bp = Blueprint('main', __name__)
@@ -180,65 +180,65 @@ def get_graph_data():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/refresh-data', methods=['POST'])
-def refresh_data():
-    messages = []
-    coc_api_key = os.getenv("COC_API_KEY")
-    clan_tag = "%23CQGY2LQU"
-    headers = {
-        "Accept": "application/json",
-        "authorization": "Bearer %s" % coc_api_key
-    }  
+# @bp.route('/refresh-data', methods=['POST'])
+# def refresh_data():
+#     messages = []
+#     coc_api_key = os.getenv("COC_API_KEY")
+#     clan_tag = "%23CQGY2LQU"
+#     headers = {
+#         "Accept": "application/json",
+#         "authorization": "Bearer %s" % coc_api_key
+#     }  
 
-    seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
-    messages.append("CWL WAR TAGS FOUND")
+#     seasonal_battle_tag_df, season = get_war_tags(clan_tag, headers)
+#     messages.append("CWL WAR TAGS FOUND")
 
-    clan_war_tags, clan_war_states = wars_with_clan(seasonal_battle_tag_df)
-    messages.append("CLAN ONLY WAR TAGS FOUND")
+#     clan_war_tags, clan_war_states = wars_with_clan(seasonal_battle_tag_df)
+#     messages.append("CLAN ONLY WAR TAGS FOUND")
 
-    reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
-    for day, tag in clan_war_tags.items():
-        reduced_warTag_df = pd.concat([reduced_warTag_df, pd.DataFrame({"battleday": [day], "wartag": [tag], "season": [season]})], ignore_index=True)
-    # Update Supabase with new war tags
-    Update_Supabase_battle_tags(reduced_warTag_df)
-    messages.append("SUPABASE BATTLE TAGS UPDATED")
+#     reduced_warTag_df = pd.DataFrame(columns=["battleday", "wartag", "season"])
+#     for day, tag in clan_war_tags.items():
+#         reduced_warTag_df = pd.concat([reduced_warTag_df, pd.DataFrame({"battleday": [day], "wartag": [tag], "season": [season]})], ignore_index=True)
+#     # Update Supabase with new war tags
+#     Update_Supabase_battle_tags(reduced_warTag_df)
+#     messages.append("SUPABASE BATTLE TAGS UPDATED")
 
-    war_manager = WarDataManager(status_table="war_status")
-    total = sum(1 for tag in clan_war_tags.values() if tag != "#0")
-    done = 0
+#     war_manager = WarDataManager(status_table="war_status")
+#     total = sum(1 for tag in clan_war_tags.values() if tag != "#0")
+#     done = 0
 
-    for day, wartag in clan_war_tags.items():
-        if wartag == "#0":
-            continue
-        msg = f"Refreshing war data for: {wartag}, day {day}, season {season}"
-        print(msg, flush=True)
-        messages.append(msg)
+#     for day, wartag in clan_war_tags.items():
+#         if wartag == "#0":
+#             continue
+#         msg = f"Refreshing war data for: {wartag}, day {day}, season {season}"
+#         print(msg, flush=True)
+#         messages.append(msg)
 
-        # Process the war
-        war_manager.process_war(
-            wartag,
-            get_war_stats,
-            season=season,
-            battleday=day
-        )
+#         # Process the war
+#         war_manager.process_war(
+#             wartag,
+#             get_war_stats,
+#             season=season,
+#             battleday=day
+#         )
 
-        # Increment progress and log status
-        done += 1
-        progress_msg = f"Found data for {done}/{total}"
-        print(progress_msg, flush=True)
-        messages.append(progress_msg)
+#         # Increment progress and log status
+#         done += 1
+#         progress_msg = f"Found data for {done}/{total}"
+#         print(progress_msg, flush=True)
+#         messages.append(progress_msg)
     
-    messages.append("Data refreshed!")
-    return jsonify({"success": True, "message": "Data refreshed!", "log": messages})
+#     messages.append("Data refreshed!")
+#     return jsonify({"success": True, "message": "Data refreshed!", "log": messages})
 
-@bp.route('/refresh-status')
-def refresh_status():
-    def event_stream():
-        # Imagine these are your steps
-        yield "data: Starting refresh...\n\n"
-        yield "data: Finding battletags...\n\n"
-        # Call Find_battletags function here, yield progress...
-        yield "data: Reading war data...\n\n"
-        # Call reading_WarData function here, yield progress...
-        yield "data: Done!\n\n"
-    return Response(event_stream(), mimetype="text/event-stream")
+# @bp.route('/refresh-status')
+# def refresh_status():
+#     def event_stream():
+#         # Imagine these are your steps
+#         yield "data: Starting refresh...\n\n"
+#         yield "data: Finding battletags...\n\n"
+#         # Call Find_battletags function here, yield progress...
+#         yield "data: Reading war data...\n\n"
+#         # Call reading_WarData function here, yield progress...
+#         yield "data: Done!\n\n"
+#     return Response(event_stream(), mimetype="text/event-stream")

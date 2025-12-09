@@ -5,7 +5,7 @@ import sys
 import io
 from datetime import datetime
 import os
-from app.supabase_client import supabase, update_war_status
+from webapp.supabase_client import supabase, update_war_status
 
 # COC API key (loaded via supabase_client's dotenv call)
 coc_api_key = os.getenv("COC_API_KEY")

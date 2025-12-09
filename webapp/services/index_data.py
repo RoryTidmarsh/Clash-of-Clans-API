@@ -1,4 +1,4 @@
-from app.supabase_client import supabase
+from webapp.supabase_client import supabase
 import pandas as pd
 
 def get_index_data(player_filter=None):
