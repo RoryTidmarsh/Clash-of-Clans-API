@@ -24,7 +24,7 @@ Before you begin, ensure you have:
 
 4. **Connect your GitHub repository**:
    - If this is your first time, authorize Render to access your GitHub account
-   - Select the repository: `RoryTidmarsh/Clash-of-Clans-API`
+   - Select your repository (e.g., `RoryTidmarsh/Clash-of-Clans-API` or your fork)
    - Click "Connect"
 
 ### 2. Configure the Web Service
@@ -257,13 +257,15 @@ On Render, add these same variables through the dashboard (Environment Variables
 - ⚠️ Cold start time: 30-60 seconds
 - ✅ Unlimited bandwidth
 
-### Paid Tier Benefits ($7+/month)
+### Paid Tier Benefits
 - ✅ No spin down / Always running
 - ✅ Faster response times
 - ✅ More memory and CPU
 - ✅ Priority support
 
 For a personal project like this, the **free tier is usually sufficient**.
+
+**Note**: Pricing is subject to change. Check [Render's pricing page](https://render.com/pricing) for current rates.
 
 ---
 
