@@ -566,7 +566,7 @@ class WarDataManager:
         ]
         return "\n".join(lines)
 
-if __name__ == "__main__":
+def load_warData_supabase():
     # Initialize the manager
     war_manager = WarDataManager(
         status_table="war_status"
@@ -621,3 +621,5 @@ if __name__ == "__main__":
     
     # Print summary
     print(war_manager)
+if __name__ == "__main__":
+    load_warData_supabase()
