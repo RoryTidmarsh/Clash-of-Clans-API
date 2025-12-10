@@ -7,3 +7,5 @@ __pycache__/*
 war_Data/*
 __pycache__
 tempCodeRunnerFile.*
+.venv/
+venv/
